@@ -24,7 +24,7 @@
   <!-- 2. メイン入力画面レイアウト (左: コンパクト選手ボタン / 中央: コート / 右: コンパクト記号ボタン) -->
   <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
     
-    <!-- 左側: コンパクト背番号ボタン配列 (ポジション別カラー) -->
+    <!-- 左側: コンパクト背番号ボタン配列 (ポジション別カラー、#なし) -->
     <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
       <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">コート</div>
       <% starters.each do |player| %>
@@ -39,11 +39,11 @@
                      end
           text_color = ["S", "W"].include?(player.position) ? "#222222" : "#ffffff"
         %>
-        <button type="button" class="player-btn" data-player-id="<%= player.id %>" data-player-name="#<%= player.number %> <%= player.name %>" 
+        <button type="button" class="player-btn" data-player-id="<%= player.id %>" data-player-name="<%= player.number %> <%= player.name %>" 
                 onclick="selectPlayer(this)" oncontextmenu="openSubstitutionModal(<%= player.id %>, '<%= player.name %>'); return false;"
-                title="#<%= player.number %> <%= player.name %> (<%= player.position %>)"
+                title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
                 style="width: 55px; height: 38px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 6px; font-weight: bold; font-size: 1.1em; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          #<%= player.number %>
+          <%= player.number %>
         </button>
       <% end %>
       <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
@@ -149,7 +149,7 @@
           <% if p_logs.any? || player.is_starter? %>
             <tr style="border-bottom: 1px solid #eee;">
               <td style="padding: 8px; border: 1px solid #ddd; text-align: left; font-weight: bold;">
-                #<%= player.number %> <%= player.name %> <span style="font-size: 0.8em; color: #666;">(<%= player.position %>)</span>
+                <%= player.number %> <%= player.name %> <span style="font-size: 0.8em; color: #666;">(<%= player.position %>)</span>
               </td>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #007bff;"><%= sprintf("%.1f", s_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= s_total %>本)</span></td>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #28a745;"><%= sprintf("%.1f", k_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= k_total %>本)</span></td>
