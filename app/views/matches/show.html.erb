@@ -21,8 +21,8 @@
     <% end %>
   </div>
 
-  <!-- メイン入力画面レイアウト (左: 選手 / 中央: コート / 右: 評価ボタン) -->
-  <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
+  <!-- メイン入力画面レイアウト (左: 選手 / 中央: コート / 右: B決定 + 評価ボタン) -->
+  <div style="display: grid; grid-template-columns: 80px 1fr 75px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
     
     <!-- 左側: 背番号ボタン配列 -->
     <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
@@ -49,7 +49,7 @@
       <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
     </div>
 
-    <!-- 中央: バレーボールコートマップ (コート外領域も判定できるように余白ラッパー配置) -->
+    <!-- 中央: バレーボールコートマップ -->
     <div style="text-align: center; padding: 15px 5px;">
       <!-- 相手サーブエリア -->
       <div id="opp_serve_area" onclick="selectZone('相手サーブエリア')" style="background: #444; color: #ffeb3b; padding: 6px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">
@@ -58,9 +58,9 @@
 
       <div id="court_canvas" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none; -webkit-user-select: none;">
         
-        <!-- ネットゾーン -->
-        <div id="net_zone" onclick="triggerBlockKill(event)" style="position: absolute; top: 44%; width: 100%; height: 12%; background: rgba(255, 255, 255, 0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; border-top: 2px solid white; border-bottom: 2px solid white; z-index: 10;">
-          <span style="color: #ffeb3b; font-weight: bold; font-size: 0.75em; text-shadow: 0 0 3px black; pointer-events: none;">--- NET (タップ/長押しでブロック決定) ---</span>
+        <!-- ネットライン -->
+        <div style="position: absolute; top: 48%; width: 100%; height: 4%; background: rgba(255, 255, 255, 0.4); display: flex; align-items: center; justify-content: center; pointer-events: none; border-top: 2px solid white; border-bottom: 2px solid white; z-index: 2;">
+          <span style="color: #ffeb3b; font-weight: bold; font-size: 0.7em; text-shadow: 0 0 3px black;">--- NET ---</span>
         </div>
         
         <!-- フロントゾーンライン (自チーム) -->
@@ -70,7 +70,7 @@
         <div style="position: absolute; top: 18%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">相手コート</div>
         <div style="position: absolute; bottom: 18%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">自チームコート</div>
 
-        <!-- SVG 矢印＆ブロックマーク表示レイヤー (overflow: visible でコート外描画を許可) -->
+        <!-- SVG 矢印＆ブロックマーク表示レイヤー -->
         <svg id="arrow_svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; overflow: visible;">
           <defs>
             <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -87,7 +87,7 @@
             </marker>
           </defs>
 
-          <!-- 過去ログの描画 (コート外の座標もそのまま描画) -->
+          <!-- 過去ログの描画 -->
           <% @match.play_logs.where(set_number: current_set).each do |log| %>
             <% if log.action_type == "ブロック" && log.start_x.present? %>
               <rect x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
@@ -122,27 +122,34 @@
 
       <!-- 操作ステータス案内バー -->
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
-        操作: コート外へはみ出たコースもそのまま矢印表示可能！
+        操作: 選手選択 ➔ 右側「B決定」タップでブロック登録
       </div>
     </div>
 
-    <!-- 右側: コンパクト評価ボタン（◎ / ◯ / △ / ✖️） -->
+    <!-- 右側: ブロック決定ボタン ＆ 評価ボタン -->
     <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
-      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">評価</div>
+      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">記録</div>
 
-      <button type="button" onclick="submitLog('◎', '決定/成功')" style="width: 50px; height: 50px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <!-- 新設: B決定ボタン -->
+      <button type="button" onclick="submitBlockKill()" style="width: 55px; height: 42px; background: #fd7e14; color: white; border: 2px solid #ffffff; border-radius: 8px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+        B決定
+      </button>
+
+      <div style="width: 100%; border-bottom: 1px solid #555; margin: 2px 0;"></div>
+
+      <button type="button" onclick="submitLog('◎', '決定/成功')" style="width: 50px; height: 45px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         ◎
       </button>
 
-      <button type="button" onclick="submitLog('◯', 'ラリー/普通')" style="width: 50px; height: 50px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" onclick="submitLog('◯', 'ラリー/普通')" style="width: 50px; height: 45px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         ◯
       </button>
 
-      <button type="button" onclick="submitLog('△', '乱れ/効果薄')" style="width: 50px; height: 50px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" onclick="submitLog('△', '乱れ/効果薄')" style="width: 50px; height: 45px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         △
       </button>
 
-      <button type="button" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 50px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 45px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         ✖️
       </button>
     </div>
@@ -238,27 +245,23 @@
     updateStatus("ゾーン: " + zoneName);
   }
 
-  function triggerBlockKill(e) {
-    e.stopPropagation();
+  // 右側の「B決定」ボタンタップ処理
+  function submitBlockKill() {
     if (!selectedPlayerId) {
-      alert("ブロックを記録するには先に左側の自チーム選手ボタンを選択してください。");
+      alert("ブロックを記録するには、まず左側の選手ボタンを選択してください。");
       return;
     }
-
-    const rect = court.getBoundingClientRect();
-    const x = (((e.clientX - rect.left) / rect.width) * 100).toFixed(1);
 
     document.getElementById('form_player_id').value = selectedPlayerId;
     document.getElementById('form_action_type').value = "ブロック";
     document.getElementById('form_eval_detail').value = "◎";
     document.getElementById('form_result').value = "ブロック決定";
-    document.getElementById('form_start_x').value = x;
+    document.getElementById('form_start_x').value = "50.0";
     document.getElementById('form_start_y').value = "50.0";
 
     document.getElementById('play_log_form').submit();
   }
 
-  // コート外の座標も正確にパーセンテージ計算（制限を解除）
   function getCoords(e) {
     const rect = court.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -270,8 +273,6 @@
   }
 
   function startDrag(e) {
-    if (e.target.id === 'net_zone') return;
-    
     if (e.touches && e.touches.length > 1) {
       isDrawing = false;
       previewLine.style.display = 'none';
