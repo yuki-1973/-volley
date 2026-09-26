@@ -46,7 +46,7 @@
           <%= player.number %>
         </button>
       <% end %>
-      <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
+      <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">全表示</button>
     </div>
 
     <!-- 中央: バレーボールコートマップ -->
@@ -90,7 +90,7 @@
           <!-- 過去ログの描画 -->
           <% @match.play_logs.where(set_number: current_set).each do |log| %>
             <% if log.action_type == "ブロック" && log.start_x.present? %>
-              <rect x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
+              <rect class="log-element player-log-<%= log.player_id %>" x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
             <% elsif log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
               <%
                 arrow_color = case log.eval_detail
@@ -104,7 +104,7 @@
                             else "arrow-gray"
                             end
               %>
-              <line x1="<%= log.start_x %>%" y1="<%= log.start_y %>%" x2="<%= log.end_x %>%" y2="<%= log.end_y %>%"
+              <line class="log-element player-log-<%= log.player_id %>" x1="<%= log.start_x %>%" y1="<%= log.start_y %>%" x2="<%= log.end_x %>%" y2="<%= log.end_y %>%"
                     stroke="<%= arrow_color %>" stroke-width="3" stroke-dasharray="<%= log.action_type.include?('スパイク') ? 'none' : '4,4' %>"
                     marker-end="url(#<%= marker_id %>)" />
             <% end %>
@@ -122,7 +122,7 @@
 
       <!-- 操作ステータス案内バー -->
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
-        操作: 選手選択 ➔ 右側「B決定」タップでブロック登録
+        選手ボタンタップでその選手のコースのみフィルター表示
       </div>
     </div>
 
@@ -215,10 +215,29 @@
       </tbody>
     </table>
   </div>
+
+  <!-- 新設: セット最終スコア入力 & セット終了エリア -->
+  <div style="margin-top: 20px; background: #f8f9fa; border: 2px solid #007bff; padding: 15px; border-radius: 8px;">
+    <h4 style="margin: 0 0 10px 0; color: #007bff; font-size: 1em;">🏁 第 <%= current_set %> セット 最終スコア入力・終了</h4>
+    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+      <div>
+        <label style="font-size: 0.85em; font-weight: bold; color: #333;"><%= @team.name %>（自チーム）:</label>
+        <input type="number" id="own_set_score" placeholder="25" style="width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; text-align: center; font-size: 1.1em;">
+      </div>
+      <div style="font-weight: bold; font-size: 1.2em; color: #666;">-</div>
+      <div>
+        <label style="font-size: 0.85em; font-weight: bold; color: #333;"><%= @match.opponent_name %>（相手）:</label>
+        <input type="number" id="opp_set_score" placeholder="23" style="width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; text-align: center; font-size: 1.1em;">
+      </div>
+      <button type="button" onclick="finishSet(<%= current_set %>)" style="padding: 8px 18px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+        第 <%= current_set %> セットを終了する
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
-  // --- スクロール位置の保持と復元処理 ---
+  // スクロール位置保持・復元
   document.addEventListener('DOMContentLoaded', () => {
     const scrollPos = sessionStorage.getItem('match_show_scroll_pos');
     if (scrollPos) {
@@ -242,15 +261,31 @@
   const court = document.getElementById('court_canvas');
   const previewLine = document.getElementById('preview_line');
 
+  // 選手ボタン選択処理（フィルタリング機能を追加）
   function selectPlayer(btn) {
     document.querySelectorAll('.player-btn').forEach(b => b.style.borderColor = 'transparent');
+    
     if (btn) {
       selectedPlayerId = btn.getAttribute('data-player-id');
       btn.style.borderColor = '#00e676';
-      updateStatus("自チーム選手選択: " + btn.getAttribute('data-player-name'));
+      updateStatus("選手選択中: " + btn.getAttribute('data-player-name') + " (該当コースのみ強調)");
+
+      // コート上の過去線をフィルタリング
+      document.querySelectorAll('.log-element').forEach(el => {
+        if (el.classList.contains('player-log-' + selectedPlayerId)) {
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
     } else {
       selectedPlayerId = null;
-      updateStatus("選手選択解除");
+      updateStatus("全選手のコースを表示中");
+
+      // 全要素を再表示
+      document.querySelectorAll('.log-element').forEach(el => {
+        el.style.display = 'block';
+      });
     }
   }
 
@@ -259,7 +294,6 @@
     updateStatus("ゾーン: " + zoneName);
   }
 
-  // 右側の「B決定」ボタンタップ処理
   function submitBlockKill() {
     if (!selectedPlayerId) {
       alert("ブロックを記録するには、まず左側の選手ボタンを選択してください。");
@@ -274,6 +308,25 @@
     document.getElementById('form_start_y').value = "50.0";
 
     saveScrollPositionAndSubmit();
+  }
+
+  function finishSet(setNum) {
+    const ownScore = document.getElementById('own_set_score').value;
+    const oppScore = document.getElementById('opp_set_score').value;
+
+    if (!ownScore || !oppScore) {
+      alert("自チームおよび相手チームのスコアを入力してください。");
+      return;
+    }
+
+    alert("第 " + setNum + " セットを記録しました (" + ownScore + " - " + oppScore + ")。");
+    // 次のセットが存在すれば自動遷移
+    const nextSet = setNum + 1;
+    if (nextSet <= <%= @match.total_sets %>) {
+      window.location.href = "<%= team_match_path(@team, @match) %>?set_number=" + nextSet;
+    } else {
+      alert("全セットが完了しました。お疲れ様でした！");
+    }
   }
 
   function getCoords(e) {
@@ -335,7 +388,7 @@
     isDrawing = false;
     const isOpponentStart = parseFloat(startPos.y) < 50;
     if (isOpponentStart) {
-      updateStatus("相手スパイク描画完了 ➔ 右側の評価ボタン(◎ ◯ △ ✖️)を選択してください");
+      updateStatus("相手スパイク描画完了 ➔ 右側の評価ボタンを選択してください");
     } else {
       updateStatus("自チームスパイク描画完了 ➔ 右側の評価ボタンを選択してください");
     }
