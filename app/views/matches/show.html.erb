@@ -130,7 +130,7 @@
     <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
       <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">記録</div>
 
-      <!-- 新設: B決定ボタン -->
+      <!-- B決定ボタン -->
       <button type="button" onclick="submitBlockKill()" style="width: 55px; height: 42px; background: #fd7e14; color: white; border: 2px solid #ffffff; border-radius: 8px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
         B決定
       </button>
@@ -218,6 +218,20 @@
 </div>
 
 <script>
+  // --- スクロール位置の保持と復元処理 ---
+  document.addEventListener('DOMContentLoaded', () => {
+    const scrollPos = sessionStorage.getItem('match_show_scroll_pos');
+    if (scrollPos) {
+      window.scrollTo(0, parseInt(scrollPos, 10));
+      sessionStorage.removeItem('match_show_scroll_pos');
+    }
+  });
+
+  function saveScrollPositionAndSubmit() {
+    sessionStorage.setItem('match_show_scroll_pos', window.scrollY);
+    document.getElementById('play_log_form').submit();
+  }
+
   let selectedPlayerId = null;
   let selectedZone = null;
 
@@ -259,7 +273,7 @@
     document.getElementById('form_start_x').value = "50.0";
     document.getElementById('form_start_y').value = "50.0";
 
-    document.getElementById('play_log_form').submit();
+    saveScrollPositionAndSubmit();
   }
 
   function getCoords(e) {
@@ -369,6 +383,6 @@
       document.getElementById('form_end_y').value = endPos.y;
     }
 
-    document.getElementById('play_log_form').submit();
+    saveScrollPositionAndSubmit();
   }
 </script>
