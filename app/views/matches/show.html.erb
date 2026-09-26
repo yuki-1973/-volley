@@ -22,11 +22,11 @@
   </div>
 
   <!-- メイン入力画面レイアウト (左: 選手 / 中央: コート / 右: B決定 + 評価ボタン) -->
-  <div style="display: grid; grid-template-columns: 80px 1fr 75px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
+  <div id="main_input_container" style="display: grid; grid-template-columns: 80px 1fr 75px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white; position: relative;">
     
     <!-- 左側: 背番号ボタン配列 -->
     <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
-      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">コート</div>
+      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">背番号</div>
       <% starters.each do |player| %>
         <%
           bg_color = case player.position
@@ -40,13 +40,13 @@
           text_color = ["S", "W"].include?(player.position) ? "#222222" : "#ffffff"
         %>
         <button type="button" class="player-btn" data-player-id="<%= player.id %>" data-player-name="<%= player.number %> <%= player.name %>" 
-                onclick="selectPlayer(this)"
+                onclick="togglePlayerSelect(this)"
                 title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
                 style="width: 55px; height: 38px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 6px; font-weight: bold; font-size: 1.1em; cursor: pointer; display: flex; align-items: center; justify-content: center;">
           <%= player.number %>
         </button>
       <% end %>
-      <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">全表示</button>
+      <button type="button" onclick="resetPlayerFilter()" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">全表示</button>
     </div>
 
     <!-- 中央: バレーボールコートマップ -->
@@ -122,7 +122,7 @@
 
       <!-- 操作ステータス案内バー -->
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
-        選手ボタンタップでその選手のコースのみフィルター表示
+        背番号タップでその選手のスパイク矢印のみを表示
       </div>
     </div>
 
@@ -131,25 +131,25 @@
       <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">記録</div>
 
       <!-- B決定ボタン -->
-      <button type="button" onclick="submitBlockKill()" style="width: 55px; height: 42px; background: #fd7e14; color: white; border: 2px solid #ffffff; border-radius: 8px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+      <button type="button" class="record-btn" onclick="submitBlockKill()" style="width: 55px; height: 42px; background: #fd7e14; color: white; border: 2px solid #ffffff; border-radius: 8px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
         B決定
       </button>
 
       <div style="width: 100%; border-bottom: 1px solid #555; margin: 2px 0;"></div>
 
-      <button type="button" onclick="submitLog('◎', '決定/成功')" style="width: 50px; height: 45px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" class="record-btn" onclick="submitLog('◎', '決定/成功')" style="width: 50px; height: 45px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         ◎
       </button>
 
-      <button type="button" onclick="submitLog('◯', 'ラリー/普通')" style="width: 50px; height: 45px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" class="record-btn" onclick="submitLog('◯', 'ラリー/普通')" style="width: 50px; height: 45px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         ◯
       </button>
 
-      <button type="button" onclick="submitLog('△', '乱れ/効果薄')" style="width: 50px; height: 45px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" class="record-btn" onclick="submitLog('△', '乱れ/効果薄')" style="width: 50px; height: 45px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         △
       </button>
 
-      <button type="button" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 45px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <button type="button" class="record-btn" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 45px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
         ✖️
       </button>
     </div>
@@ -216,7 +216,7 @@
     </table>
   </div>
 
-  <!-- 新設: セット最終スコア入力 & セット終了エリア -->
+  <!-- セット最終スコア入力 & セット終了エリア -->
   <div style="margin-top: 20px; background: #f8f9fa; border: 2px solid #007bff; padding: 15px; border-radius: 8px;">
     <h4 style="margin: 0 0 10px 0; color: #007bff; font-size: 1em;">🏁 第 <%= current_set %> セット 最終スコア入力・終了</h4>
     <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
@@ -229,7 +229,7 @@
         <label style="font-size: 0.85em; font-weight: bold; color: #333;"><%= @match.opponent_name %>（相手）:</label>
         <input type="number" id="opp_set_score" placeholder="23" style="width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; text-align: center; font-size: 1.1em;">
       </div>
-      <button type="button" onclick="finishSet(<%= current_set %>)" style="padding: 8px 18px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+      <button type="button" id="finish_set_btn" onclick="finishSet(<%= current_set %>)" style="padding: 8px 18px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95em;">
         第 <%= current_set %> セットを終了する
       </button>
     </div>
@@ -237,7 +237,10 @@
 </div>
 
 <script>
-  // スクロール位置保持・復元
+  let isLocked = false;
+  let activePlayerId = null;
+
+  // スクロール位置の保持・復元
   document.addEventListener('DOMContentLoaded', () => {
     const scrollPos = sessionStorage.getItem('match_show_scroll_pos');
     if (scrollPos) {
@@ -251,65 +254,44 @@
     document.getElementById('play_log_form').submit();
   }
 
-  let selectedPlayerId = null;
-  let selectedZone = null;
+  // 選手ボタンタップ処理（1回目: 該当選手のみ / 2回目: 解除で全表示）
+  function togglePlayerSelect(btn) {
+    const targetPlayerId = btn.getAttribute('data-player-id');
 
-  let isDrawing = false;
-  let startPos = { x: 0, y: 0 };
-  let endPos = { x: 0, y: 0 };
-
-  const court = document.getElementById('court_canvas');
-  const previewLine = document.getElementById('preview_line');
-
-  // 選手ボタン選択処理（フィルタリング機能を追加）
-  function selectPlayer(btn) {
-    document.querySelectorAll('.player-btn').forEach(b => b.style.borderColor = 'transparent');
-    
-    if (btn) {
-      selectedPlayerId = btn.getAttribute('data-player-id');
+    if (activePlayerId === targetPlayerId) {
+      // 2回目のタップ：選択解除（全表示）
+      resetPlayerFilter();
+    } else {
+      // 1回目のタップ：該当選手のみ表示
+      activePlayerId = targetPlayerId;
+      document.querySelectorAll('.player-btn').forEach(b => b.style.borderColor = 'transparent');
       btn.style.borderColor = '#00e676';
-      updateStatus("選手選択中: " + btn.getAttribute('data-player-name') + " (該当コースのみ強調)");
 
-      // コート上の過去線をフィルタリング
       document.querySelectorAll('.log-element').forEach(el => {
-        if (el.classList.contains('player-log-' + selectedPlayerId)) {
+        if (el.classList.contains('player-log-' + targetPlayerId)) {
           el.style.display = 'block';
         } else {
           el.style.display = 'none';
         }
       });
-    } else {
-      selectedPlayerId = null;
-      updateStatus("全選手のコースを表示中");
 
-      // 全要素を再表示
-      document.querySelectorAll('.log-element').forEach(el => {
-        el.style.display = 'block';
-      });
+      updateStatus("背番号 " + btn.getAttribute('data-player-name') + " のコースのみ表示中（再度タップで解除）");
     }
+  }
+
+  function resetPlayerFilter() {
+    activePlayerId = null;
+    document.querySelectorAll('.player-btn').forEach(b => b.style.borderColor = 'transparent');
+    document.querySelectorAll('.log-element').forEach(el => el.style.display = 'block');
+    updateStatus(isLocked ? "🔒 入力終了（全選手のコース表示中）" : "全選手のコースを表示中");
   }
 
   function selectZone(zoneName) {
-    selectedZone = zoneName;
+    if (isLocked) return;
     updateStatus("ゾーン: " + zoneName);
   }
 
-  function submitBlockKill() {
-    if (!selectedPlayerId) {
-      alert("ブロックを記録するには、まず左側の選手ボタンを選択してください。");
-      return;
-    }
-
-    document.getElementById('form_player_id').value = selectedPlayerId;
-    document.getElementById('form_action_type').value = "ブロック";
-    document.getElementById('form_eval_detail').value = "◎";
-    document.getElementById('form_result').value = "ブロック決定";
-    document.getElementById('form_start_x').value = "50.0";
-    document.getElementById('form_start_y').value = "50.0";
-
-    saveScrollPositionAndSubmit();
-  }
-
+  // セット終了処理（入力ロック＆完了）
   function finishSet(setNum) {
     const ownScore = document.getElementById('own_set_score').value;
     const oppScore = document.getElementById('opp_set_score').value;
@@ -319,15 +301,31 @@
       return;
     }
 
-    alert("第 " + setNum + " セットを記録しました (" + ownScore + " - " + oppScore + ")。");
-    // 次のセットが存在すれば自動遷移
-    const nextSet = setNum + 1;
-    if (nextSet <= <%= @match.total_sets %>) {
-      window.location.href = "<%= team_match_path(@team, @match) %>?set_number=" + nextSet;
-    } else {
-      alert("全セットが完了しました。お疲れ様でした！");
-    }
+    // 入力ロックを有効化
+    isLocked = true;
+
+    // 記録系ボタンの無効化処理
+    document.querySelectorAll('.record-btn').forEach(btn => {
+      btn.disabled = true;
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+    });
+
+    const finishBtn = document.getElementById('finish_set_btn');
+    finishBtn.disabled = true;
+    finishBtn.style.background = '#6c757d';
+    finishBtn.innerText = "第 " + setNum + " セット終了済み";
+
+    updateStatus("🔒 入力終了：背番号タップで各選手のコースを確認できます");
+    alert("第 " + setNum + " セットを終了しました (" + ownScore + " - " + oppScore + ")。これ以上の新規入力はできません。");
   }
+
+  let isDrawing = false;
+  let startPos = { x: 0, y: 0 };
+  let endPos = { x: 0, y: 0 };
+
+  const court = document.getElementById('court_canvas');
+  const previewLine = document.getElementById('preview_line');
 
   function getCoords(e) {
     const rect = court.getBoundingClientRect();
@@ -340,6 +338,7 @@
   }
 
   function startDrag(e) {
+    if (isLocked) return; // ロック時は矢印描画を無効化
     if (e.touches && e.touches.length > 1) {
       isDrawing = false;
       previewLine.style.display = 'none';
@@ -362,7 +361,7 @@
   }
 
   function moveDrag(e) {
-    if (!isDrawing) return;
+    if (isLocked || !isDrawing) return;
 
     if (e.touches && e.touches.length > 1) {
       isDrawing = false;
@@ -384,7 +383,7 @@
   }
 
   function endDrag(e) {
-    if (!isDrawing) return;
+    if (isLocked || !isDrawing) return;
     isDrawing = false;
     const isOpponentStart = parseFloat(startPos.y) < 50;
     if (isOpponentStart) {
@@ -406,25 +405,39 @@
     document.getElementById('status_bar').innerText = msg;
   }
 
+  function submitBlockKill() {
+    if (isLocked) return;
+    if (!activePlayerId) {
+      alert("ブロックを記録するには、まず左側の選手ボタンを選択してください。");
+      return;
+    }
+
+    document.getElementById('form_player_id').value = activePlayerId;
+    document.getElementById('form_action_type').value = "ブロック";
+    document.getElementById('form_eval_detail').value = "◎";
+    document.getElementById('form_result').value = "ブロック決定";
+    document.getElementById('form_start_x').value = "50.0";
+    document.getElementById('form_start_y').value = "50.0";
+
+    saveScrollPositionAndSubmit();
+  }
+
   function submitLog(evalSymbol, resultStr) {
+    if (isLocked) return;
     let actionType = "スパイク";
 
     const isOpponentSpike = (startPos.y !== 0 && parseFloat(startPos.y) < 50.0);
 
     if (isOpponentSpike) {
       actionType = "相手スパイク";
-    } else if (selectedZone === "自チームサーブエリア") {
-      actionType = "サーブ";
-    } else if (selectedZone === "相手サーブエリア") {
-      actionType = "レセプション";
     }
 
-    if (!isOpponentSpike && !selectedPlayerId && actionType !== "レセプション") {
+    if (!isOpponentSpike && !activePlayerId) {
       alert("自チームのアクションを記録する場合は、先に左側の選手ボタンを選択してください。");
       return;
     }
 
-    document.getElementById('form_player_id').value = selectedPlayerId;
+    document.getElementById('form_player_id').value = activePlayerId;
     document.getElementById('form_action_type').value = actionType;
     document.getElementById('form_eval_detail').value = evalSymbol;
     document.getElementById('form_result').value = resultStr;
