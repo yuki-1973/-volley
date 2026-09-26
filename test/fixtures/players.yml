@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  team: one
+  number: 1
+  name: MyString
+  position: MyString
+  is_starter: false
+
+two:
+  team: two
+  number: 1
+  name: MyString
+  position: MyString
+  is_starter: false

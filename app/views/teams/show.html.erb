@@ -1,0 +1,35 @@
+<div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
+  <div style="margin-bottom: 20px;">
+    <%= link_to "← チーム一覧へ戻る", teams_path, style: "color: #718096; text-decoration: none;" %>
+  </div>
+
+  <h1 style="color: #2b5282; margin-bottom: 5px;"><%= @team.name %></h1>
+  <p style="color: #4a5568; margin-bottom: 25px;">選手一覧・スタメン構成</p>
+
+  <table style="width: 100%; border-collapse: collapse; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+    <thead>
+      <tr style="background-color: #edf2f7; text-align: left;">
+        <th style="padding: 12px;">背番号</th>
+        <th style="padding: 12px;">氏名</th>
+        <th style="padding: 12px;">ポジション</th>
+        <th style="padding: 12px;">区分</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @team.players.reject { |p| p.name.blank? }.each do |player| %>
+        <tr style="border-bottom: 1px solid #edf2f7; <%= 'background-color: #e6fffa;' if player.is_starter %>">
+          <td style="padding: 12px; font-weight: bold;">No.<%= player.number %></td>
+          <td style="padding: 12px;"><%= player.name %></td>
+          <td style="padding: 12px;"><%= player.position %></td>
+          <td style="padding: 12px;">
+            <% if player.is_starter %>
+              <span style="background-color: #319795; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">★ スタメン</span>
+            <% else %>
+              <span style="color: #a0aec0; font-size: 0.85em;">控え</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
