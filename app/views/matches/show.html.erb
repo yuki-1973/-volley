@@ -21,7 +21,7 @@
     <% end %>
   </div>
 
-  <!-- メイン入力画面レイアウト (左: 選手 / 中央: コート＆矢印描画 / 右: 評価ボタン) -->
+  <!-- メイン入力画面レイアウト (左: 選手 / 中央: コート / 右: 評価ボタン) -->
   <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
     
     <!-- 左側: 背番号ボタン配列 (ポジション別カラー) -->
@@ -49,7 +49,7 @@
       <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
     </div>
 
-    <!-- 中央: バレーボールコートマップ (ドラッグ描画・矢印表示機能付き) -->
+    <!-- 中央: バレーボールコートマップ -->
     <div style="text-align: center;">
       <!-- 相手サーブエリア -->
       <div id="opp_serve_area" onclick="selectZone('相手サーブエリア')" style="background: #444; color: #ffeb3b; padding: 6px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">
@@ -57,41 +57,42 @@
       </div>
 
       <div id="court_canvas" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none;">
-        <!-- ネット -->
-        <div style="position: absolute; top: 50%; width: 100%; height: 5px; background: #fff; transform: translateY(-50%); box-shadow: 0 0 4px rgba(0,0,0,0.5); pointer-events: none;"></div>
-        <div style="position: absolute; top: 48%; width: 100%; text-align: center; color: rgba(255,255,255,0.8); font-size: 0.65em; pointer-events: none;">--- NET ---</div>
+        
+        <!-- ネットゾーン（押しやすいよう判定幅を拡大 ＆ ブロック入力トリガー） -->
+        <div id="net_zone" onclick="triggerBlockKill(event)" style="position: absolute; top: 44%; width: 100%; height: 12%; background: rgba(255, 255, 255, 0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; border-top: 2px solid white; border-bottom: 2px solid white; z-index: 10;">
+          <span style="color: #ffeb3b; font-weight: bold; font-size: 0.75em; text-shadow: 0 0 3px black; pointer-events: none;">--- NET (タップ/長押しでブロック決定) ---</span>
+        </div>
         
         <!-- フロントゾーンライン (自チーム) -->
         <div style="position: absolute; bottom: 33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
         
         <!-- テキスト表示 -->
-        <div style="position: absolute; top: 20%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">相手コート</div>
-        <div style="position: absolute; bottom: 20%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">自チームコート</div>
+        <div style="position: absolute; top: 18%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">相手コート</div>
+        <div style="position: absolute; bottom: 18%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">自チームコート</div>
 
-        <!-- SVG 矢印レイヤー -->
-        <svg id="arrow_svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+        <!-- SVG 矢印＆ブロックマーク表示レイヤー -->
+        <svg id="arrow_svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
           <defs>
-            <!-- 決定用 赤矢印マーカー -->
             <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff3333" />
             </marker>
-            <!-- ラリー用 グレー矢印マーカー -->
             <marker id="arrow-gray" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#aaaaaa" />
             </marker>
-            <!-- ミス用 青矢印マーカー -->
             <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#3388ff" />
             </marker>
-            <!-- ドラッグ中 プレビュー用 黄矢印マーカー -->
             <marker id="arrow-yellow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffeb3b" />
             </marker>
           </defs>
 
-          <!-- 過去ログの保存済み矢印を描画 -->
+          <!-- 過去ログの描画 (スパイク軌跡 & ブロック位置) -->
           <% @match.play_logs.where(set_number: current_set).each do |log| %>
-            <% if log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
+            <% if log.action_type == "ブロック" && log.start_x.present? %>
+              <!-- ブロック決定位置のオレンジ表示 -->
+              <rect x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
+            <% elsif log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
               <%
                 arrow_color = case log.eval_detail
                               when "◎" then "#ff3333"
@@ -122,7 +123,7 @@
 
       <!-- 操作ステータス案内バー -->
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
-        操作: 選手選択 → コート上をドラッグしてコース描画 → 右側評価タップ
+        操作: 選手タップ ➔ NETタップで【ブロック決定】即記録！
       </div>
     </div>
 
@@ -226,7 +227,7 @@
     if (btn) {
       selectedPlayerId = btn.getAttribute('data-player-id');
       btn.style.borderColor = '#00e676';
-      updateStatus("選手: " + btn.getAttribute('data-player-name') + " → コースをドラッグ描画");
+      updateStatus("選手選択: " + btn.getAttribute('data-player-name') + " ➔ NET長押し/タップで【ブロック決定】");
     } else {
       selectedPlayerId = null;
       updateStatus("選手選択解除");
@@ -238,7 +239,28 @@
     updateStatus("ゾーン: " + zoneName);
   }
 
-  // ドラッグ/タッチでのコース描画処理
+  // ブロック決定の直接送信（ネットタップ時）
+  function triggerBlockKill(e) {
+    e.stopPropagation();
+    if (!selectedPlayerId) {
+      alert("先に左側の選手ボタンを選択してください。");
+      return;
+    }
+
+    const rect = court.getBoundingClientRect();
+    const x = (((e.clientX - rect.left) / rect.width) * 100).toFixed(1);
+
+    document.getElementById('form_player_id').value = selectedPlayerId;
+    document.getElementById('form_action_type').value = "ブロック";
+    document.getElementById('form_eval_detail').value = "◎";
+    document.getElementById('form_result').value = "ブロック決定";
+    document.getElementById('form_start_x').value = x;
+    document.getElementById('form_start_y').value = "50.0";
+
+    document.getElementById('play_log_form').submit();
+  }
+
+  // ドラッグ/タッチでのスパイクコース描画処理
   function getCoords(e) {
     const rect = court.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -250,6 +272,7 @@
   }
 
   function startDrag(e) {
+    if (e.target.id === 'net_zone') return;
     isDrawing = true;
     startPos = getCoords(e);
     endPos = startPos;
@@ -267,13 +290,13 @@
 
     previewLine.setAttribute('x2', endPos.x + '%');
     previewLine.setAttribute('y2', endPos.y + '%');
-    updateStatus("コース描画中: 始点(" + startPos.x + "%," + startPos.y + "%) → 終点(" + endPos.x + "%," + endPos.y + "%)");
+    updateStatus("コース描画中: (" + startPos.x + "%," + startPos.y + "%) ➔ (" + endPos.x + "%," + endPos.y + "%)");
   }
 
   function endDrag(e) {
     if (!isDrawing) return;
     isDrawing = false;
-    updateStatus("コース描画完了！右側の評価ボタン(◎ ◯ △ ✖️)を選択してください");
+    updateStatus("コース描画完了 ➔ 右側の評価ボタン(◎ ◯ △ ✖️)を選択");
   }
 
   court.addEventListener('mousedown', startDrag);
