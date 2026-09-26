@@ -49,16 +49,16 @@
       <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
     </div>
 
-    <!-- 中央: バレーボールコートマップ -->
+    <!-- 中央: バレーボールコートマップ (スクロール抑制設定適用) -->
     <div style="text-align: center;">
       <!-- 相手サーブエリア -->
       <div id="opp_serve_area" onclick="selectZone('相手サーブエリア')" style="background: #444; color: #ffeb3b; padding: 6px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">
         ▲ 相手サーブエリア (タップでレセプション)
       </div>
 
-      <div id="court_canvas" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none;">
+      <div id="court_canvas" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none; -webkit-user-select: none;">
         
-        <!-- ネットゾーン（押しやすいよう判定幅を拡大 ＆ ブロック入力トリガー） -->
+        <!-- ネットゾーン（タップ/長押しでブロック決定） -->
         <div id="net_zone" onclick="triggerBlockKill(event)" style="position: absolute; top: 44%; width: 100%; height: 12%; background: rgba(255, 255, 255, 0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; border-top: 2px solid white; border-bottom: 2px solid white; z-index: 10;">
           <span style="color: #ffeb3b; font-weight: bold; font-size: 0.75em; text-shadow: 0 0 3px black; pointer-events: none;">--- NET (タップ/長押しでブロック決定) ---</span>
         </div>
@@ -87,10 +87,9 @@
             </marker>
           </defs>
 
-          <!-- 過去ログの描画 (スパイク軌跡 & ブロック位置) -->
+          <!-- 過去ログの描画 -->
           <% @match.play_logs.where(set_number: current_set).each do |log| %>
             <% if log.action_type == "ブロック" && log.start_x.present? %>
-              <!-- ブロック決定位置のオレンジ表示 -->
               <rect x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
             <% elsif log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
               <%
@@ -123,7 +122,7 @@
 
       <!-- 操作ステータス案内バー -->
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
-        操作: 選手タップ ➔ NETタップで【ブロック決定】即記録！
+        操作: 1本指でコーススライド描画（2本指で画面スクロール可能）
       </div>
     </div>
 
@@ -227,7 +226,7 @@
     if (btn) {
       selectedPlayerId = btn.getAttribute('data-player-id');
       btn.style.borderColor = '#00e676';
-      updateStatus("選手選択: " + btn.getAttribute('data-player-name') + " ➔ NET長押し/タップで【ブロック決定】");
+      updateStatus("選手: " + btn.getAttribute('data-player-name') + " ➔ 1本指でスライド描画");
     } else {
       selectedPlayerId = null;
       updateStatus("選手選択解除");
@@ -239,7 +238,6 @@
     updateStatus("ゾーン: " + zoneName);
   }
 
-  // ブロック決定の直接送信（ネットタップ時）
   function triggerBlockKill(e) {
     e.stopPropagation();
     if (!selectedPlayerId) {
@@ -260,7 +258,6 @@
     document.getElementById('play_log_form').submit();
   }
 
-  // ドラッグ/タッチでのスパイクコース描画処理
   function getCoords(e) {
     const rect = court.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -273,6 +270,19 @@
 
   function startDrag(e) {
     if (e.target.id === 'net_zone') return;
+    
+    // タッチ操作時、2本指以上の場合はスクロールを許可し描画処理を行わない
+    if (e.touches && e.touches.length > 1) {
+      isDrawing = false;
+      previewLine.style.display = 'none';
+      return;
+    }
+
+    // 1本指タッチ時は画面スクロールを防止する
+    if (e.touches && e.touches.length === 1) {
+      if (e.cancelable) e.preventDefault();
+    }
+
     isDrawing = true;
     startPos = getCoords(e);
     endPos = startPos;
@@ -286,8 +296,18 @@
 
   function moveDrag(e) {
     if (!isDrawing) return;
-    endPos = getCoords(e);
 
+    if (e.touches && e.touches.length > 1) {
+      isDrawing = false;
+      previewLine.style.display = 'none';
+      return;
+    }
+
+    if (e.touches && e.touches.length === 1) {
+      if (e.cancelable) e.preventDefault();
+    }
+
+    endPos = getCoords(e);
     previewLine.setAttribute('x2', endPos.x + '%');
     previewLine.setAttribute('y2', endPos.y + '%');
     updateStatus("コース描画中: (" + startPos.x + "%," + startPos.y + "%) ➔ (" + endPos.x + "%," + endPos.y + "%)");
@@ -303,8 +323,9 @@
   court.addEventListener('mousemove', moveDrag);
   window.addEventListener('mouseup', endDrag);
 
-  court.addEventListener('touchstart', startDrag, { passive: true });
-  court.addEventListener('touchmove', moveDrag, { passive: true });
+  // passive: false にすることで e.preventDefault() でのスクロール停止を確定化
+  court.addEventListener('touchstart', startDrag, { passive: false });
+  court.addEventListener('touchmove', moveDrag, { passive: false });
   window.addEventListener('touchend', endDrag);
 
   function updateStatus(msg) {
