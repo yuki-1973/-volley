@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  match: one
+  player: one
+  set_number: 1
+  action_type: MyString
+  result: MyString
+
+two:
+  match: two
+  player: two
+  set_number: 1
+  action_type: MyString
+  result: MyString
