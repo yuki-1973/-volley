@@ -1,2 +1,45 @@
-<h1>Teams#edit</h1>
-<p>Find me in app/views/teams/edit.html.erb</p>
+<div style="max-width: 900px; margin: 30px auto; padding: 20px; font-family: sans-serif;">
+  <h2>✏️ チーム・選手情報の編集</h2>
+
+  <%= form_with model: @team, local: true do |f| %>
+    <div style="margin-bottom: 20px;">
+      <%= f.label :name, "チーム名", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
+      <%= f.text_field :name, required: true, style: "width: 100%; padding: 8px; box-sizing: border-box;" %>
+    </div>
+
+    <h3>👕 選手エントリー（最大18名）</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <thead>
+        <tr style="background: #f4f4f4; text-align: left;">
+          <th style="padding: 8px; border: 1px solid #ccc;">スタメン</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">背番号</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">選手氏名</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">ポジション</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= f.fields_for :players do |p| %>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">
+              <%= p.check_box :starter %>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+              <%= p.number_field :number, style: "width: 60px; padding: 4px;" %>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+              <%= p.text_field :name, style: "width: 100%; padding: 4px; box-sizing: border-box;" %>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+              <%= p.select :position, ["OH", "MB", "OP", "S", "L"], { include_blank: "選択" }, style: "padding: 4px;" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <div>
+      <%= f.submit "更新する", style: "background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;" %>
+      <%= link_to "キャンセル", team_path(@team), style: "margin-left: 15px; color: #666; text-decoration: none;" %>
+    </div>
+  <% end %>
+</div>
