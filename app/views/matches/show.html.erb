@@ -21,37 +21,69 @@
     <% end %>
   </div>
 
-  <!-- メイン画面レイアウト -->
-  <div id="main_input_container" style="display: grid; grid-template-columns: 80px 1fr 75px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
+  <!-- メイン画面レイアウト (左: 操作ボタン集約 / 右: コート) -->
+  <div id="main_input_container" style="display: grid; grid-template-columns: 150px 1fr; gap: 15px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
     
-    <!-- 左側: 背番号ボタン配列 -->
-    <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
-      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">背番号</div>
-      <% starters.each do |player| %>
-        <%
-          bg_color = case player.position
-                     when "S"  then "#ffeb3b"
-                     when "L"  then "#28a745"
-                     when "W"  then "#ffffff"
-                     when "M"  then "#6c757d"
-                     when "OP" then "#fd7e14"
-                     else "#aaaaaa"
-                     end
-          text_color = ["S", "W"].include?(player.position) ? "#222222" : "#ffffff"
-        %>
-        <button type="button" class="player-btn" 
-                data-player-id="<%= player.id %>" 
-                data-player-name="<%= player.number %> <%= player.name %>"
-                onclick="togglePlayerSelect(this)"
-                title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
-                style="width: 55px; height: 38px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 6px; font-weight: bold; font-size: 1.1em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
-          <%= player.number %>
+    <!-- 左側エリア: 操作ボタン集約パネル (2列構成) -->
+    <div style="display: flex; gap: 10px; border-right: 1px solid #444; padding-right: 12px; justify-content: center;">
+      
+      <!-- 1列目: 選手（背番号）選択 -->
+      <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+        <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">選手</div>
+        <% starters.each do |player| %>
+          <%
+            bg_color = case player.position
+                       when "S"  then "#ffeb3b"
+                       when "L"  then "#28a745"
+                       when "W"  then "#ffffff"
+                       when "M"  then "#6c757d"
+                       when "OP" then "#fd7e14"
+                       else "#aaaaaa"
+                       end
+            text_color = ["S", "W"].include?(player.position) ? "#222222" : "#ffffff"
+          %>
+          <button type="button" class="player-btn" 
+                  data-player-id="<%= player.id %>" 
+                  data-player-name="<%= player.number %> <%= player.name %>"
+                  onclick="togglePlayerSelect(this)"
+                  title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
+                  style="width: 50px; height: 38px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 6px; font-weight: bold; font-size: 1.1em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+            <%= player.number %>
+          </button>
+        <% end %>
+        <button type="button" onclick="resetPlayerFilter()" style="width: 50px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">全表示</button>
+      </div>
+
+      <!-- 2列目: 記録＆評価ボタン -->
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
+        <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">記録</div>
+
+        <button type="button" class="record-btn" onclick="submitBlockKill()" style="width: 50px; height: 38px; background: #fd7e14; color: white; border: 2px solid #ffffff; border-radius: 6px; font-size: 0.8em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+          B決定
         </button>
-      <% end %>
-      <button type="button" onclick="resetPlayerFilter()" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">全表示</button>
+
+        <div style="width: 100%; border-bottom: 1px solid #555; margin: 1px 0;"></div>
+
+        <button type="button" class="record-btn" onclick="submitLog('◎', '決定/成功')" style="width: 50px; height: 42px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 1.3em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          ◎
+        </button>
+
+        <button type="button" class="record-btn" onclick="submitLog('◯', 'ラリー/普通')" style="width: 50px; height: 42px; background: #17a2b8; color: white; border: none; border-radius: 6px; font-size: 1.3em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          ◯
+        </button>
+
+        <button type="button" class="record-btn" onclick="submitLog('△', '乱れ/効果薄')" style="width: 50px; height: 42px; background: #ffc107; color: #222; border: none; border-radius: 6px; font-size: 1.3em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          △
+        </button>
+
+        <button type="button" class="record-btn" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 42px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 1.3em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          ✖️
+        </button>
+      </div>
+
     </div>
 
-    <!-- 中央: バレーボールコートマップ (正方形 300px × 600px / 各コート 300px × 300px) -->
+    <!-- 右側エリア: バレーボールコートマップ (正方形 300px × 600px / 各コート 300px × 300px) -->
     <div style="text-align: center; padding: 10px 5px;">
       <!-- 相手サーブエリア (タップでレセプション選択) -->
       <div id="opp_serve_area" onclick="selectZone('レセプション')" style="background: #444; color: #ffeb3b; padding: 8px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; border: 2px solid transparent;">
@@ -60,7 +92,7 @@
 
       <div id="court_canvas" style="position: relative; width: 300px; height: 600px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none; -webkit-user-select: none;">
         
-        <!-- センターライン (ネットラインの代わりに線のみ表示) -->
+        <!-- センターライン -->
         <div style="position: absolute; top: 50%; width: 100%; height: 2px; background: white; pointer-events: none; transform: translateY(-50%); z-index: 2;"></div>
         
         <!-- アタックライン (相手コート: 上から 33.33%) -->
@@ -94,7 +126,6 @@
               <rect class="log-element log-player-<%= p_id %>" data-player-id="<%= p_id %>" x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
             <% elsif log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
               <%
-                # ◎決定は黄色(#ffeb3b)
                 arrow_color = case log.eval_detail
                               when "◎" then "#ffeb3b"
                               when "✖️" then "#3388ff"
@@ -124,33 +155,6 @@
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
         背番号タップでその選手のスパイク矢印のみを表示
       </div>
-    </div>
-
-    <!-- 右側: ブロック決定ボタン ＆ 評価ボタン -->
-    <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
-      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">記録</div>
-
-      <button type="button" class="record-btn" onclick="submitBlockKill()" style="width: 55px; height: 42px; background: #fd7e14; color: white; border: 2px solid #ffffff; border-radius: 8px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-        B決定
-      </button>
-
-      <div style="width: 100%; border-bottom: 1px solid #555; margin: 2px 0;"></div>
-
-      <button type="button" class="record-btn" onclick="submitLog('◎', '決定/成功')" style="width: 50px; height: 45px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-        ◎
-      </button>
-
-      <button type="button" class="record-btn" onclick="submitLog('◯', 'ラリー/普通')" style="width: 50px; height: 45px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-        ◯
-      </button>
-
-      <button type="button" class="record-btn" onclick="submitLog('△', '乱れ/効果薄')" style="width: 50px; height: 45px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-        △
-      </button>
-
-      <button type="button" class="record-btn" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 45px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.4em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-        ✖️
-      </button>
     </div>
   </div>
 
@@ -238,7 +242,7 @@
 <script>
   let isLocked = false;
   let activePlayerId = null;
-  let selectedMode = null; // 'サーブ' or 'レセプション'
+  let selectedMode = null;
 
   document.addEventListener('DOMContentLoaded', () => {
     const scrollPos = sessionStorage.getItem('match_show_scroll_pos');
@@ -301,7 +305,7 @@
     document.getElementById('opp_serve_area').style.borderColor = (mode === 'レセプション') ? '#ffeb3b' : 'transparent';
     document.getElementById('own_serve_area').style.borderColor = (mode === 'サーブ') ? '#ffeb3b' : 'transparent';
 
-    updateStatus("【" + mode + "】を選択中 ➔ 右側の評価ボタンを選択してください");
+    updateStatus("【" + mode + "】を選択中 ➔ 左側の評価ボタンを選択してください");
   }
 
   function finishSet(setNum) {
@@ -393,7 +397,7 @@
 
     const isOpponentStart = parseFloat(startPos.y) < 50;
     const attackerType = isOpponentStart ? "【相手スパイク】(選手選択不要)" : "【自チームスパイク】";
-    updateStatus(attackerType + " コース描画中 ➔ 右側の評価ボタンを選択してください");
+    updateStatus(attackerType + " コース描画中 ➔ 左側の評価ボタンを選択してください");
   }
 
   function endDrag(e) {
