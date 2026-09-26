@@ -24,7 +24,7 @@
   <!-- メイン入力画面レイアウト (左: 選手 / 中央: コート / 右: 評価ボタン) -->
   <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
     
-    <!-- 左側: 背番号ボタン配列 (ポジション別カラー) -->
+    <!-- 左側: 背番号ボタン配列 -->
     <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
       <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">コート</div>
       <% starters.each do |player| %>
@@ -49,7 +49,7 @@
       <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
     </div>
 
-    <!-- 中央: バレーボールコートマップ (スクロール抑制設定適用) -->
+    <!-- 中央: バレーボールコートマップ -->
     <div style="text-align: center;">
       <!-- 相手サーブエリア -->
       <div id="opp_serve_area" onclick="selectZone('相手サーブエリア')" style="background: #444; color: #ffeb3b; padding: 6px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">
@@ -58,7 +58,7 @@
 
       <div id="court_canvas" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none; -webkit-user-select: none;">
         
-        <!-- ネットゾーン（タップ/長押しでブロック決定） -->
+        <!-- ネットゾーン -->
         <div id="net_zone" onclick="triggerBlockKill(event)" style="position: absolute; top: 44%; width: 100%; height: 12%; background: rgba(255, 255, 255, 0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; border-top: 2px solid white; border-bottom: 2px solid white; z-index: 10;">
           <span style="color: #ffeb3b; font-weight: bold; font-size: 0.75em; text-shadow: 0 0 3px black; pointer-events: none;">--- NET (タップ/長押しでブロック決定) ---</span>
         </div>
@@ -87,7 +87,7 @@
             </marker>
           </defs>
 
-          <!-- 過去ログの描画 -->
+          <!-- 過去ログの描画 (自チーム・相手スパイク両方表示) -->
           <% @match.play_logs.where(set_number: current_set).each do |log| %>
             <% if log.action_type == "ブロック" && log.start_x.present? %>
               <rect x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
@@ -105,7 +105,7 @@
                             end
               %>
               <line x1="<%= log.start_x %>%" y1="<%= log.start_y %>%" x2="<%= log.end_x %>%" y2="<%= log.end_y %>%"
-                    stroke="<%= arrow_color %>" stroke-width="3" stroke-dasharray="<%= log.action_type == 'スパイク' ? 'none' : '4,4' %>"
+                    stroke="<%= arrow_color %>" stroke-width="3" stroke-dasharray="<%= log.action_type.include?('スパイク') ? 'none' : '4,4' %>"
                     marker-end="url(#<%= marker_id %>)" />
             <% end %>
           <% end %>
@@ -122,7 +122,7 @@
 
       <!-- 操作ステータス案内バー -->
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
-        操作: 1本指でコーススライド描画（2本指で画面スクロール可能）
+        操作: 相手コート始点で選手ボタン不要 ➔ 右評価ボタンタップで相手スパイク分析！
       </div>
     </div>
 
@@ -226,7 +226,7 @@
     if (btn) {
       selectedPlayerId = btn.getAttribute('data-player-id');
       btn.style.borderColor = '#00e676';
-      updateStatus("選手: " + btn.getAttribute('data-player-name') + " ➔ 1本指でスライド描画");
+      updateStatus("自チーム選手選択: " + btn.getAttribute('data-player-name'));
     } else {
       selectedPlayerId = null;
       updateStatus("選手選択解除");
@@ -241,7 +241,7 @@
   function triggerBlockKill(e) {
     e.stopPropagation();
     if (!selectedPlayerId) {
-      alert("先に左側の選手ボタンを選択してください。");
+      alert("ブロックを記録するには先に左側の自チーム選手ボタンを選択してください。");
       return;
     }
 
@@ -271,14 +271,12 @@
   function startDrag(e) {
     if (e.target.id === 'net_zone') return;
     
-    // タッチ操作時、2本指以上の場合はスクロールを許可し描画処理を行わない
     if (e.touches && e.touches.length > 1) {
       isDrawing = false;
       previewLine.style.display = 'none';
       return;
     }
 
-    // 1本指タッチ時は画面スクロールを防止する
     if (e.touches && e.touches.length === 1) {
       if (e.cancelable) e.preventDefault();
     }
@@ -310,20 +308,27 @@
     endPos = getCoords(e);
     previewLine.setAttribute('x2', endPos.x + '%');
     previewLine.setAttribute('y2', endPos.y + '%');
-    updateStatus("コース描画中: (" + startPos.x + "%," + startPos.y + "%) ➔ (" + endPos.x + "%," + endPos.y + "%)");
+
+    const isOpponentStart = parseFloat(startPos.y) < 50;
+    const attackerType = isOpponentStart ? "【相手スパイク】" : "【自チームスパイク】";
+    updateStatus(attackerType + " コース描画中: 始点(" + startPos.x + "%," + startPos.y + "%) ➔ 終点(" + endPos.x + "%," + endPos.y + "%)");
   }
 
   function endDrag(e) {
     if (!isDrawing) return;
     isDrawing = false;
-    updateStatus("コース描画完了 ➔ 右側の評価ボタン(◎ ◯ △ ✖️)を選択");
+    const isOpponentStart = parseFloat(startPos.y) < 50;
+    if (isOpponentStart) {
+      updateStatus("相手スパイク描画完了 ➔ 右側の評価ボタン(◎ ◯ △ ✖️)を選択してください");
+    } else {
+      updateStatus("自チームスパイク描画完了 ➔ 右側の評価ボタンを選択してください");
+    }
   }
 
   court.addEventListener('mousedown', startDrag);
   court.addEventListener('mousemove', moveDrag);
   window.addEventListener('mouseup', endDrag);
 
-  // passive: false にすることで e.preventDefault() でのスクロール停止を確定化
   court.addEventListener('touchstart', startDrag, { passive: false });
   court.addEventListener('touchmove', moveDrag, { passive: false });
   window.addEventListener('touchend', endDrag);
@@ -335,10 +340,21 @@
   function submitLog(evalSymbol, resultStr) {
     let actionType = "スパイク";
 
-    if (selectedZone === "自チームサーブエリア") {
+    // Y座標が50%未満（上半分＝相手コート）からのスライドは相手スパイクとして判定
+    const isOpponentSpike = (startPos.y !== 0 && parseFloat(startPos.y) < 50.0);
+
+    if (isOpponentSpike) {
+      actionType = "相手スパイク";
+    } else if (selectedZone === "自チームサーブエリア") {
       actionType = "サーブ";
     } else if (selectedZone === "相手サーブエリア") {
       actionType = "レセプション";
+    }
+
+    // 自チームのアクションで選手未選択の場合は警告
+    if (!isOpponentSpike && !selectedPlayerId && actionType !== "レセプション") {
+      alert("自チームのアクションを記録する場合は、先に左側の選手ボタンを選択してください。");
+      return;
     }
 
     document.getElementById('form_player_id').value = selectedPlayerId;
