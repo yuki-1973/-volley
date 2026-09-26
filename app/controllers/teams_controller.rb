@@ -1,10 +1,6 @@
-class TeamsController < ApplicationRecord
+class TeamsController < ApplicationController
   def index
     @teams = Team.all
-  end
-
-  def show
-    @team = Team.find(params[:id])
   end
 
   def new
@@ -15,15 +11,19 @@ class TeamsController < ApplicationRecord
   def create
     @team = Team.new(team_params)
     if @team.save
-      redirect_to @team, notice: 'チームと選手情報を登録しました。'
+      redirect_to @team, notice: "チームを登録しました"
     else
-      render :new
+      render :new, status: :unprocessable_entity
     end
+  end
+
+  def show
+    @team = Team.find(params[:id])
   end
 
   private
 
   def team_params
-    params.require(:team).permit(:name, players_attributes: [:id, :number, :name, :position, :is_starter])
+    params.require(:team).permit(:name, players_attributes: [:id, :number, :name, :position, :starter, :_destroy])
   end
 end
