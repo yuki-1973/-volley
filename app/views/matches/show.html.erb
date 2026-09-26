@@ -51,40 +51,39 @@
       <button type="button" onclick="resetPlayerFilter()" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">全表示</button>
     </div>
 
-    <!-- 中央: バレーボールコートマップ -->
-    <div style="text-align: center; padding: 15px 5px;">
+    <!-- 中央: バレーボールコートマップ (正方形 300px × 600px / 各コート 300px × 300px) -->
+    <div style="text-align: center; padding: 10px 5px;">
       <!-- 相手サーブエリア (タップでレセプション選択) -->
       <div id="opp_serve_area" onclick="selectZone('レセプション')" style="background: #444; color: #ffeb3b; padding: 8px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; border: 2px solid transparent;">
         ▲ 相手サーブエリア (タップでレセプション選択)
       </div>
 
-      <div id="court_canvas" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none; -webkit-user-select: none;">
+      <div id="court_canvas" style="position: relative; width: 300px; height: 600px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair; touch-action: none; -webkit-user-select: none;">
         
-        <!-- ネットライン -->
-        <div style="position: absolute; top: 48%; width: 100%; height: 4%; background: rgba(255, 255, 255, 0.4); display: flex; align-items: center; justify-content: center; pointer-events: none; border-top: 2px solid white; border-bottom: 2px solid white; z-index: 2;">
-          <span style="color: #ffeb3b; font-weight: bold; font-size: 0.7em; text-shadow: 0 0 3px black;">--- NET ---</span>
-        </div>
+        <!-- センターライン (ネットラインの代わりに線のみ表示) -->
+        <div style="position: absolute; top: 50%; width: 100%; height: 2px; background: white; pointer-events: none; transform: translateY(-50%); z-index: 2;"></div>
         
-        <!-- フロントゾーンライン (自チーム) -->
-        <div style="position: absolute; bottom: 33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
+        <!-- アタックライン (相手コート: 上から 33.33%) -->
+        <div style="position: absolute; top: 33.33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
+
+        <!-- アタックライン (自チームコート: 下から 33.33%) -->
+        <div style="position: absolute; bottom: 33.33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
         
-        <div style="position: absolute; top: 18%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">相手コート</div>
-        <div style="position: absolute; bottom: 18%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">自チームコート</div>
+        <div style="position: absolute; top: 15%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">相手コート</div>
+        <div style="position: absolute; bottom: 15%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">自チームコート</div>
 
         <!-- SVG 矢印＆ブロックマーク表示レイヤー -->
         <svg id="arrow_svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; overflow: visible;">
           <defs>
-            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff3333" />
+            <!-- 決定（◎）用: 黄色矢印 -->
+            <marker id="arrow-yellow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffeb3b" />
             </marker>
             <marker id="arrow-gray" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#aaaaaa" />
             </marker>
             <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#3388ff" />
-            </marker>
-            <marker id="arrow-yellow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffeb3b" />
             </marker>
           </defs>
 
@@ -95,13 +94,14 @@
               <rect class="log-element log-player-<%= p_id %>" data-player-id="<%= p_id %>" x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
             <% elsif log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
               <%
+                # ◎決定は黄色(#ffeb3b)
                 arrow_color = case log.eval_detail
-                              when "◎" then "#ff3333"
+                              when "◎" then "#ffeb3b"
                               when "✖️" then "#3388ff"
                               else "#aaaaaa"
                               end
                 marker_id = case log.eval_detail
-                            when "◎" then "arrow-red"
+                            when "◎" then "arrow-yellow"
                             when "✖️" then "arrow-blue"
                             else "arrow-gray"
                             end
@@ -360,7 +360,7 @@
     }
 
     isDrawing = true;
-    selectedMode = null; // ドラッグ開始時はスパイク判定へ
+    selectedMode = null;
     document.getElementById('opp_serve_area').style.borderColor = 'transparent';
     document.getElementById('own_serve_area').style.borderColor = 'transparent';
 
@@ -392,7 +392,7 @@
     previewLine.setAttribute('y2', endPos.y + '%');
 
     const isOpponentStart = parseFloat(startPos.y) < 50;
-    const attackerType = isOpponentStart ? "【相手スパイク】" : "【自チームスパイク】";
+    const attackerType = isOpponentStart ? "【相手スパイク】(選手選択不要)" : "【自チームスパイク】";
     updateStatus(attackerType + " コース描画中 ➔ 右側の評価ボタンを選択してください");
   }
 
@@ -433,27 +433,28 @@
   function submitLog(evalSymbol, resultStr) {
     if (isLocked) return;
 
-    if (!activePlayerId) {
-      alert("記録するには、まず左側の選手（背番号）を選択してください。");
-      return;
-    }
-
     let actionType = "スパイク";
+    const isOpponentSpike = (startPos.y !== 0 && parseFloat(startPos.y) < 50.0);
 
     if (selectedMode === "サーブ") {
       actionType = "サーブ";
     } else if (selectedMode === "レセプション") {
       actionType = "レセプション";
-    } else if (startPos.y !== 0 && parseFloat(startPos.y) < 50.0) {
+    } else if (isOpponentSpike) {
       actionType = "相手スパイク";
     }
 
-    document.getElementById('form_player_id').value = activePlayerId;
+    // 相手スパイク以外は自チームの選手選択が必須
+    if (!isOpponentSpike && !activePlayerId) {
+      alert("記録するには、まず左側の選手（背番号）を選択してください。");
+      return;
+    }
+
+    document.getElementById('form_player_id').value = isOpponentSpike ? "" : activePlayerId;
     document.getElementById('form_action_type').value = actionType;
     document.getElementById('form_eval_detail').value = evalSymbol;
     document.getElementById('form_result').value = resultStr;
 
-    // サーブやレセプションなどのタップのみの記録時は座標リセット
     if (selectedMode === "サーブ" || selectedMode === "レセプション") {
       document.getElementById('form_start_x').value = "";
       document.getElementById('form_start_y').value = "";
