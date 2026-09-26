@@ -1,48 +1,45 @@
-<div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
-  <h1 style="color: #2b5282;">🏐 新規チーム・選手登録</h1>
+<div style="max-width: 900px; margin: 30px auto; padding: 20px; font-family: sans-serif;">
+  <h2>➕ 新規チーム＆選手登録</h2>
 
-  <%= form_with(model: @team, local: true) do |f| %>
-    <div style="margin-bottom: 25px;">
+  <%= form_with model: @team, local: true do |f| %>
+    <div style="margin-bottom: 20px;">
       <%= f.label :name, "チーム名", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
-      <%= f.text_field :name, placeholder: "例: 〇〇バレーボールクラブ", required: true, style: "width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1em;" %>
+      <%= f.text_field :name, required: true, style: "width: 100%; padding: 8px; box-sizing: border-box;" %>
     </div>
 
-    <h2 style="font-size: 1.2em; color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">選手登録 (最大18名)</h2>
-    <p style="color: #718096; font-size: 0.85em;">※ポジション：W（ウイングスパイカー）、M（ミドルブロッカー）、S（セッター）、L（リベロ）</p>
-
-    <div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; min-width: 500px;">
-        <thead>
-          <tr style="background-color: #f7fafc; text-align: left; border-bottom: 2px solid #edf2f7;">
-            <th style="padding: 10px;">スタメン</th>
-            <th style="padding: 10px;">背番号</th>
-            <th style="padding: 10px;">氏名</th>
-            <th style="padding: 10px;">ポジション</th>
+    <h3>👕 選手エントリー（最大18名）</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <thead>
+        <tr style="background: #f4f4f4; text-align: left;">
+          <th style="padding: 8px; border: 1px solid #ccc;">スタメン</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">背番号</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">選手氏名</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">ポジション</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= f.fields_for :players do |p| %>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">
+              <%= p.check_box :starter %>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+              <%= p.number_field :number, style: "width: 60px; padding: 4px;" %>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+              <%= p.text_field :name, style: "width: 100%; padding: 4px; box-sizing: border-box;" %>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+              <%= p.select :position, ["OH", "MB", "OP", "S", "L"], { include_blank: "選択" }, style: "padding: 4px;" %>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <%= f.fields_for :players do |p| %>
-            <tr style="border-bottom: 1px solid #edf2f7;">
-              <td style="padding: 8px; text-align: center;">
-                <%= p.check_box :is_starter, style: "transform: scale(1.3);" %>
-              </td>
-              <td style="padding: 8px;">
-                <%= p.number_field :number, placeholder: "1", style: "width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;" %>
-              </td>
-              <td style="padding: 8px;">
-                <%= p.text_field :name, placeholder: "選手名", style: "width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc;" %>
-              </td>
-              <td style="padding: 8px;">
-                <%= p.select :position, [["W", "W"], ["M", "M"], ["S", "S"], ["L", "L"]], { include_blank: "-" }, style: "padding: 6px; border-radius: 4px; border: 1px solid #ccc;" %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
 
-    <div style="text-align: center; margin-top: 30px;">
-      <%= f.submit "チームと選手を登録する", style: "background-color: #3182ce; color: white; padding: 12px 30px; font-weight: bold; border: none; border-radius: 8px; font-size: 1em; cursor: pointer;" %>
+    <div>
+      <%= f.submit "チームを登録する", style: "background: #28a745; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;" %>
+      <%= link_to "キャンセル", teams_path, style: "margin-left: 15px; color: #666; text-decoration: none;" %>
     </div>
   <% end %>
 </div>

@@ -1,2 +1,19 @@
-<h1>Teams#index</h1>
-<p>Find me in app/views/teams/index.html.erb</p>
+<div style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: sans-serif;">
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px;">
+    <h2>🏐 登録チーム一覧</h2>
+    <%= link_to "＋ 新規チーム登録", new_team_path, style: "background: #007bff; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold;" %>
+  </div>
+
+  <% if @teams.any? %>
+    <ul style="list-style: none; padding: 0; margin-top: 20px;">
+      <% @teams.each do |team| %>
+        <li style="border: 1px solid #ddd; margin-bottom: 10px; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <strong style="font-size: 1.2em;"><%= team.name %></strong>
+          <%= link_to "詳細・選手名簿", team_path(team), style: "color: #007bff; text-decoration: none;" %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p style="margin-top: 20px; color: #666;">登録されているチームはまだありません。「新規チーム登録」からチームを作成してください。</p>
+  <% end %>
+</div>
