@@ -4,93 +4,100 @@
   <% starters = @team.players.first(8) %>
 <% end %>
 
-<div style="max-width: 1200px; margin: 10px auto; padding: 10px; font-family: sans-serif; user-select: none;">
+<div style="max-width: 1100px; margin: 10px auto; padding: 10px; font-family: sans-serif; user-select: none;">
   <!-- ヘッダー情報 -->
   <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 8px;">
-    <h2 style="margin: 0; font-size: 1.3em;">🏐 <%= @team.name %> vs <%= @match.opponent_name %></h2>
+    <h2 style="margin: 0; font-size: 1.2em;">🏐 <%= @team.name %> vs <%= @match.opponent_name %></h2>
     <div>
-      <%= link_to "← 試合一覧", team_matches_path(@team), style: "color: #007bff; text-decoration: none; margin-right: 15px; font-weight: bold;" %>
-      <span style="font-size: 0.9em; color: #666;"><%= @match.match_date %></span>
+      <%= link_to "← 試合一覧", team_matches_path(@team), style: "color: #007bff; text-decoration: none; margin-right: 15px; font-weight: bold; font-size: 0.9em;" %>
+      <span style="font-size: 0.85em; color: #666;"><%= @match.match_date %></span>
     </div>
   </div>
 
   <!-- セット切替タブ -->
   <div style="margin: 10px 0; display: flex; gap: 8px;">
     <% (1..@match.total_sets).each do |s| %>
-      <%= link_to "第 #{s} セット", team_match_path(@team, @match, set_number: s), style: "padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; #{s == current_set ? 'background: #007bff; color: white;' : 'background: #e9ecef; color: #333;'}" %>
+      <%= link_to "第 #{s} セット", team_match_path(@team, @match, set_number: s), style: "padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; #{s == current_set ? 'background: #007bff; color: white;' : 'background: #e9ecef; color: #333;'}" %>
     <% end %>
   </div>
 
-  <!-- 2. メイン入力画面レイアウト (左: 選手 / 中央: コート / 右: 評価ボタン) -->
-  <div style="display: grid; grid-template-columns: 180px 1fr 180px; gap: 10px; align-items: start; background: #222; padding: 15px; border-radius: 10px; color: white;">
+  <!-- 2. メイン入力画面レイアウト (左: コンパクト選手ボタン / 中央: コート / 右: コンパクト記号ボタン) -->
+  <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 10px; align-items: center; background: #222; padding: 12px; border-radius: 10px; color: white;">
     
-    <!-- 左側: スタメン（6〜8名）ボタン配列 -->
-    <div style="display: flex; flex-direction: column; gap: 8px;">
-      <div style="font-size: 0.85em; font-weight: bold; text-align: center; color: #aaa;">コート内選手 (長押しで交代)</div>
-      <% starters.each_with_index do |player, idx| %>
+    <!-- 左側: コンパクト背番号ボタン配列 (ポジション別カラー) -->
+    <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">コート</div>
+      <% starters.each do |player| %>
+        <%
+          bg_color = case player.position
+                     when "S"  then "#ffeb3b"
+                     when "L"  then "#28a745"
+                     when "W"  then "#ffffff"
+                     when "M"  then "#6c757d"
+                     when "OP" then "#fd7e14"
+                     else "#aaaaaa"
+                     end
+          text_color = ["S", "W"].include?(player.position) ? "#222222" : "#ffffff"
+        %>
         <button type="button" class="player-btn" data-player-id="<%= player.id %>" data-player-name="#<%= player.number %> <%= player.name %>" 
                 onclick="selectPlayer(this)" oncontextmenu="openSubstitutionModal(<%= player.id %>, '<%= player.name %>'); return false;"
-                style="padding: 12px 8px; background: #444; color: white; border: 2px solid #666; border-radius: 8px; font-weight: bold; text-align: left; cursor: pointer;">
-          #<%= player.number %> <%= player.name %>
-          <span style="font-size: 0.75em; display: block; color: #ccc;"><%= player.position %></span>
+                title="#<%= player.number %> <%= player.name %> (<%= player.position %>)"
+                style="width: 55px; height: 38px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 6px; font-weight: bold; font-size: 1.1em; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          #<%= player.number %>
         </button>
       <% end %>
-      <button type="button" onclick="selectPlayer(null)" style="padding: 8px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px;">選択解除</button>
+      <button type="button" onclick="selectPlayer(null)" style="width: 55px; padding: 4px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-top: 2px;">解除</button>
     </div>
 
     <!-- 中央: バレーボールコートマップ -->
     <div style="text-align: center;">
       <!-- 相手サーブエリア -->
-      <div id="opp_serve_area" onclick="selectZone('相手サーブエリア')" style="background: #444; color: #ffeb3b; padding: 8px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold;">
+      <div id="opp_serve_area" onclick="selectZone('相手サーブエリア')" style="background: #444; color: #ffeb3b; padding: 6px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">
         ▲ 相手サーブエリア (タップでレセプション始点)
       </div>
 
-      <div id="court_canvas" onclick="handleCourtTap(event)" style="position: relative; width: 100%; max-width: 380px; height: 420px; background: #d97724; border: 4px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair;">
+      <div id="court_canvas" onclick="handleCourtTap(event)" style="position: relative; width: 100%; max-width: 340px; height: 380px; background: #d97724; border: 3px solid white; margin: 0 auto; border-radius: 4px; cursor: crosshair;">
         <!-- ネット -->
-        <div style="position: absolute; top: 50%; width: 100%; height: 6px; background: #fff; transform: translateY(-50%); box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>
-        <div style="position: absolute; top: 48%; width: 100%; text-align: center; color: rgba(255,255,255,0.8); font-size: 0.7em; pointer-events: none;">--- NET ---</div>
+        <div style="position: absolute; top: 50%; width: 100%; height: 5px; background: #fff; transform: translateY(-50%); box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>
+        <div style="position: absolute; top: 48%; width: 100%; text-align: center; color: rgba(255,255,255,0.8); font-size: 0.65em; pointer-events: none;">--- NET ---</div>
         
         <!-- フロントゾーンライン (自チーム) -->
         <div id="front_zone" style="position: absolute; bottom: 33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
         
         <!-- テキスト表示 -->
-        <div style="position: absolute; top: 20%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none;">相手コート</div>
-        <div style="position: absolute; bottom: 20%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none;">自チームコート</div>
+        <div style="position: absolute; top: 20%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">相手コート</div>
+        <div style="position: absolute; bottom: 20%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.85em;">自チームコート</div>
       </div>
 
       <!-- 自チームサーブエリア -->
-      <div id="own_serve_area" onclick="selectZone('自チームサーブエリア')" style="background: #444; color: #ffeb3b; padding: 8px; margin-top: 5px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold;">
+      <div id="own_serve_area" onclick="selectZone('自チームサーブエリア')" style="background: #444; color: #ffeb3b; padding: 6px; margin-top: 4px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">
         ▼ 自チームエンドライン (タップでサーブ始点)
       </div>
 
       <!-- 操作ステータス案内バー -->
-      <div id="status_bar" style="margin-top: 8px; background: #333; padding: 8px; border-radius: 4px; color: #00e676; font-size: 0.85em; font-weight: bold;">
-        選択中: なし (操作手順: ゾーン/選手 → コース/結果タップ)
+      <div id="status_bar" style="margin-top: 6px; background: #333; padding: 6px; border-radius: 4px; color: #00e676; font-size: 0.8em; font-weight: bold;">
+        選択中: なし (ゾーン/選手 → コース/結果タップ)
       </div>
     </div>
 
-    <!-- 右側: 判定ボタン（◎ / ◯ / △ / ✖️） -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="font-size: 0.85em; font-weight: bold; text-align: center; color: #aaa;">評価・結果決定</div>
+    <!-- 右側: コンパクト記号ボタン（◎ / ◯ / △ / ✖️） -->
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
+      <div style="font-size: 0.7em; font-weight: bold; text-align: center; color: #aaa;">評価</div>
 
-      <button type="button" onclick="submitLog('◎', '得点/成功')" style="padding: 15px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
-        ◎ 得点/成功
-        <span style="display: block; font-size: 0.65em; font-weight: normal; margin-top: 2px;">スパイク決定/Aカット/エース</span>
+      <button type="button" onclick="submitLog('◎', '得点/成功')" style="width: 50px; height: 50px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        ◎
       </button>
 
-      <button type="button" onclick="submitLog('◯', '継続/普通')" style="padding: 15px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
-        ◯ 継続/普通
-        <span style="display: block; font-size: 0.65em; font-weight: normal; margin-top: 2px;">スパイクラリー/Bカット</span>
+      <button type="button" onclick="submitLog('◯', '継続/普通')" style="width: 50px; height: 50px; background: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        ◯
       </button>
 
-      <button type="button" onclick="submitLog('△', '効果薄/乱れ')" style="padding: 15px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
-        △ 乱れる
-        <span style="display: block; font-size: 0.65em; font-weight: normal; margin-top: 2px;">カット乱れ/サーブ被Aカット</span>
+      <button type="button" onclick="submitLog('△', '効果薄/乱れ')" style="width: 50px; height: 50px; background: #ffc107; color: #222; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        △
       </button>
 
-      <button type="button" onclick="submitLog('✖️', 'ミス/失点')" style="padding: 15px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
-        ✖️ ミス/失点
-        <span style="display: block; font-size: 0.65em; font-weight: normal; margin-top: 2px;">スパイクミス/カットミス/サーブミス</span>
+      <button type="button" onclick="submitLog('✖️', 'ミス/失点')" style="width: 50px; height: 50px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 1.5em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        ✖️
       </button>
     </div>
   </div>
@@ -109,49 +116,45 @@
   <% end %>
 
   <!-- 3. 📊 データ分析画面 (選手別スタッツ集計表) -->
-  <div style="margin-top: 35px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h3 style="margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 8px; color: #333;">📊 選手別スタッツ・分析データ (第 <%= current_set %> セット)</h3>
-    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center;">
+  <div style="margin-top: 25px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 6px; color: #333; font-size: 1.1em;">📊 選手別スタッツ・分析データ (第 <%= current_set %> セット)</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 8px; text-align: center; font-size: 0.9em;">
       <thead>
         <tr style="background: #007bff; color: white;">
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">選手名</th>
-          <th style="padding: 10px; border: 1px solid #ddd;">① サーブ効果率</th>
-          <th style="padding: 10px; border: 1px solid #ddd;">② スパイク決定率</th>
-          <th style="padding: 10px; border: 1px solid #ddd;">③ レセプション成功率</th>
-          <th style="padding: 10px; border: 1px solid #ddd;">④ ブロック決定数</th>
+          <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">選手名</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">① サーブ効果率</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">② スパイク決定率</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">③ レセプション成功率</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">④ ブロック決定数</th>
         </tr>
       </thead>
       <tbody>
         <% @team.players.where.not(name: [nil, ""]).each do |player| %>
           <% p_logs = @match.play_logs.where(set_number: current_set, player_id: player.id) %>
           <% 
-            # サーブ計算
             s_logs = p_logs.where(action_type: "サーブ")
             s_total = s_logs.count
             s_rate = s_total > 0 ? (((s_logs.where(eval_detail: "◎").count * 100.0) + (s_logs.where(eval_detail: "◯").count * 25.0) - (s_logs.where(eval_detail: "✖️").count * 25.0)) / s_total) : 0.0
 
-            # スパイク計算
             k_logs = p_logs.where(action_type: "スパイク")
             k_total = k_logs.count
             k_rate = k_total > 0 ? ((k_logs.where(eval_detail: "◎").count.to_f / k_total) * 100.0) : 0.0
 
-            # レセプション計算
             r_logs = p_logs.where(action_type: "レセプション")
             r_total = r_logs.count
             r_rate = r_total > 0 ? (((r_logs.where(eval_detail: "◎").count * 100.0) + (r_logs.where(eval_detail: "◯").count * 50.0)) / r_total) : 0.0
 
-            # ブロック得点
             b_kills = p_logs.where(action_type: "ブロック", eval_detail: "◎").count
           %>
           <% if p_logs.any? || player.is_starter? %>
             <tr style="border-bottom: 1px solid #eee;">
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: left; font-weight: bold;">
+              <td style="padding: 8px; border: 1px solid #ddd; text-align: left; font-weight: bold;">
                 #<%= player.number %> <%= player.name %> <span style="font-size: 0.8em; color: #666;">(<%= player.position %>)</span>
               </td>
-              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #007bff;"><%= sprintf("%.1f", s_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= s_total %>本)</span></td>
-              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #28a745;"><%= sprintf("%.1f", k_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= k_total %>本)</span></td>
-              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #6f42c1;"><%= sprintf("%.1f", r_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= r_total %>本)</span></td>
-              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #fd7e14; font-size: 1.1em;"><%= b_kills %> 本</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #007bff;"><%= sprintf("%.1f", s_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= s_total %>本)</span></td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #28a745;"><%= sprintf("%.1f", k_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= k_total %>本)</span></td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #6f42c1;"><%= sprintf("%.1f", r_rate) %>% <span style="font-size: 0.75em; color: #888;">(<%= r_total %>本)</span></td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #fd7e14; font-size: 1.1em;"><%= b_kills %> 本</td>
             </tr>
           <% end %>
         <% end %>
@@ -166,20 +169,20 @@
   let tapPoints = [];
 
   function selectPlayer(btn) {
-    document.querySelectorAll('.player-btn').forEach(b => b.style.borderColor = '#666');
+    document.querySelectorAll('.player-btn').forEach(b => b.style.borderColor = 'transparent');
     if (btn) {
       selectedPlayerId = btn.getAttribute('data-player-id');
       btn.style.borderColor = '#00e676';
-      updateStatus("選手選択: " + btn.getAttribute('data-player-name'));
+      updateStatus("選択: " + btn.getAttribute('data-player-name'));
     } else {
       selectedPlayerId = null;
-      updateStatus("選手選択を解除しました");
+      updateStatus("選択解除");
     }
   }
 
   function selectZone(zoneName) {
     selectedZone = zoneName;
-    updateStatus("ゾーン選択: " + zoneName);
+    updateStatus("ゾーン: " + zoneName);
   }
 
   function handleCourtTap(e) {
@@ -190,9 +193,9 @@
     tapPoints.push({ x: x, y: y });
 
     if (tapPoints.length === 1) {
-      updateStatus("起点選択: (X:" + x + "%, Y:" + y + "%) → 次に終点をタップ");
+      updateStatus("起点: (X:" + x + "%, Y:" + y + "%) → 終点をタップ");
     } else if (tapPoints.length === 2) {
-      updateStatus("コース選択完了！右側の評価ボタン(◎ ◯ △ ✖️)をタップしてください");
+      updateStatus("コース選択完了 → 右側の結果ボタン(◎ ◯ △ ✖️)をタップ");
     }
   }
 
@@ -229,7 +232,7 @@
   }
 
   function openSubstitutionModal(playerId, playerName) {
-    if (confirm(playerName + " 選手を控え選手と交代しますか？")) {
+    if (confirm(playerName + " 選手を交代しますか？")) {
       alert("交代機能呼び出し");
     }
   }
