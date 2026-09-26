@@ -1,0 +1,29 @@
+<div style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: sans-serif;">
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px;">
+    <h2>🏐 <%= @team.name %> - 試合一覧</h2>
+    <%= link_to "＋ 新規試合登録", new_team_match_path(@team), style: "background: #28a745; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold;" %>
+  </div>
+
+  <div style="margin-top: 15px;">
+    <%= link_to "← チーム詳細に戻る", team_path(@team), style: "color: #007bff; text-decoration: none;" %>
+  </div>
+
+  <% if @matches.any? %>
+    <ul style="list-style: none; padding: 0; margin-top: 20px;">
+      <% @matches.each do |match| %>
+        <li style="border: 1px solid #ddd; margin-bottom: 10px; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="color: #666; font-size: 0.9em;"><%= match.match_date %></span>
+            <strong style="font-size: 1.2em; display: block;">vs <%= match.opponent_name %>（全<%= match.total_sets %>セット）</strong>
+          </div>
+          <div>
+            <%= link_to "📊 データ入力・記録", team_match_path(@team, match), style: "background: #007bff; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; margin-right: 5px;" %>
+            <%= link_to "削除", team_match_path(@team, match), data: { turbo_method: :delete, turbo_confirm: "試合データを削除しますか？" }, style: "color: #dc3545; text-decoration: none; font-size: 0.9em;" %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p style="margin-top: 20px; color: #666;">登録されている試合はありません。「新規試合登録」から試合を追加してください。</p>
+  <% end %>
+</div>

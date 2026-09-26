@@ -1,0 +1,25 @@
+<div style="max-width: 600px; margin: 40px auto; padding: 20px; font-family: sans-serif;">
+  <h2>➕ 新規試合登録 (<%= @team.name %>)</h2>
+
+  <%= form_with model: [@team, @match], local: true do |f| %>
+    <div style="margin-bottom: 15px;">
+      <%= f.label :opponent_name, "対戦相手チーム名", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
+      <%= f.text_field :opponent_name, required: true, placeholder: "例: ライバル高校", style: "width: 100%; padding: 8px; box-sizing: border-box;" %>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <%= f.label :match_date, "試合日", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
+      <%= f.date_field :match_date, required: true, style: "padding: 8px;" %>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <%= f.label :total_sets, "予定セット数", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
+      <%= f.select :total_sets, [3, 5], {}, style: "padding: 8px;" %>
+    </div>
+
+    <div>
+      <%= f.submit "登録して入力画面へ", style: "background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;" %>
+      <%= link_to "キャンセル", team_matches_path(@team), style: "margin-left: 15px; color: #666; text-decoration: none;" %>
+    </div>
+  <% end %>
+</div>
