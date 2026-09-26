@@ -1,90 +1,170 @@
 <% current_set = params[:set_number].present? ? params[:set_number].to_i : 1 %>
 
-<div style="max-width: 950px; margin: 30px auto; padding: 20px; font-family: sans-serif;">
-  <!-- ヘッダー情報 -->
+<div style="max-width: 1100px; margin: 20px auto; padding: 15px; font-family: sans-serif;">
+  <!-- ヘッダー -->
   <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px;">
     <h2>🏐 <%= @team.name %> vs <%= @match.opponent_name %></h2>
     <span style="color: #666; font-weight: bold;"><%= @match.match_date %>（全<%= @match.total_sets %>セット）</span>
   </div>
 
-  <div style="margin-top: 15px; margin-bottom: 20px;">
+  <div style="margin-top: 10px; margin-bottom: 15px;">
     <%= link_to "← 試合一覧に戻る", team_matches_path(@team), style: "color: #007bff; text-decoration: none;" %>
   </div>
 
   <!-- セット切り替えタブ -->
-  <div style="margin-bottom: 25px; display: flex; gap: 10px;">
+  <div style="margin-bottom: 20px; display: flex; gap: 8px;">
     <% (1..@match.total_sets).each do |s| %>
-      <%= link_to "第 #{s} セット", team_match_path(@team, @match, set_number: s), style: "padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; #{s == current_set ? 'background: #007bff; color: white;' : 'background: #e9ecef; color: #333;'}" %>
+      <%= link_to "第 #{s} セット", team_match_path(@team, @match, set_number: s), style: "padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; #{s == current_set ? 'background: #007bff; color: white;' : 'background: #e9ecef; color: #333;'}" %>
     <% end %>
   </div>
 
-  <!-- 入力フォームエリア -->
-  <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-    <h3 style="margin-top: 0; margin-bottom: 15px;">📝 プレイログ記録 (第 <%= current_set %> セット)</h3>
+  <!-- 📊 リアルタイム分析指標ダッシュボード -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center;">
+      <span style="font-size: 0.85em; color: #1565c0; font-weight: bold;">サーブ効果率</span>
+      <div style="font-size: 1.8em; font-weight: bold; color: #0d47a1;"><%= sprintf("%.1f", @match.serve_effect_rate(current_set)) %>%</div>
+    </div>
+    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; text-align: center;">
+      <span style="font-size: 0.85em; color: #2e7d32; font-weight: bold;">自チーム スパイク決定率</span>
+      <div style="font-size: 1.8em; font-weight: bold; color: #1b5e20;"><%= sprintf("%.1f", @match.spike_kill_rate(current_set, 'own')) %>%</div>
+    </div>
+    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; text-align: center;">
+      <span style="font-size: 0.85em; color: #ef6c00; font-weight: bold;">相手チーム スパイク決定率</span>
+      <div style="font-size: 1.8em; font-weight: bold; color: #e65100;"><%= sprintf("%.1f", @match.spike_kill_rate(current_set, 'opponent')) %>%</div>
+    </div>
+    <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; text-align: center;">
+      <span style="font-size: 0.85em; color: #6a1b9a; font-weight: bold;">レセプション成功率</span>
+      <div style="font-size: 1.8em; font-weight: bold; color: #4a148c;"><%= sprintf("%.1f", @match.reception_success_rate(current_set)) %>%</div>
+    </div>
+  </div>
 
-    <%= form_with model: [@team, @match, PlayLog.new], local: true do |f| %>
+  <!-- 📝 タップ式簡易入力エリア -->
+  <div style="background: #f8f9fa; border: 2px solid #007bff; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+    <h3 style="margin-top: 0; color: #007bff;">⚡ ワンタップ・クイック記録 (第 <%= current_set %> セット)</h3>
+
+    <%= form_with model: [@team, @match, PlayLog.new], local: true, id: "quick_log_form" do |f| %>
       <%= f.hidden_field :set_number, value: current_set %>
+      <%= f.hidden_field :start_x, id: "start_x" %>
+      <%= f.hidden_field :start_y, id: "start_y" %>
+      <%= f.hidden_field :end_x, id: "end_x" %>
+      <%= f.hidden_field :end_y, id: "end_y" %>
 
-      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
-        <div style="flex: 1; min-width: 150px;">
-          <%= f.label :player_id, "選手", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
-          <%= f.collection_select :player_id, @team.players.where.not(name: [nil, ""]), :id, ->(p) { "##{p.number} #{p.name} (#{p.position})" }, { prompt: "選手を選択" }, { required: true, style: "width: 100%; padding: 8px;" } %>
+      <!-- Step 1: 対象チーム & 選手 -->
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 5px;">1. 対象選択</label>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <%= f.select :team_type, [["自チーム", "own"], ["相手チーム", "opponent"]], {}, { id: "team_type_select", style: "padding: 10px; border-radius: 6px; font-weight: bold;" } %>
+          <%= f.collection_select :player_id, @team.players.where.not(name: [nil, ""]), :id, ->(p) { "##{p.number} #{p.name}" }, { prompt: "選手選択 (相手の場合は未選択可)" }, { style: "padding: 10px; border-radius: 6px; flex: 1;" } %>
+        </div>
+      </div>
+
+      <!-- Step 2: アクション & 結果判定ボタン -->
+      <div style="margin-bottom: 20px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 5px;">2. アクション & 結果タップ</label>
+        
+        <!-- サーブ -->
+        <div style="margin-bottom: 10px;">
+          <span style="display: inline-block; width: 100px; font-weight: bold;">🏐 サーブ:</span>
+          <button type="button" onclick="submitQuick('サーブ', 'エース', '得点/成功')" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">エース (+100)</button>
+          <button type="button" onclick="submitQuick('サーブ', '効果(崩した)', '継続/普通')" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">相手崩し (+25)</button>
+          <button type="button" onclick="submitQuick('サーブ', '通常', '継続/普通')" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">通常</button>
+          <button type="button" onclick="submitQuick('サーブ', 'ミス', 'ミス/失点')" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">ミス (-25)</button>
         </div>
 
-        <div style="flex: 1; min-width: 130px;">
-          <%= f.label :action_type, "アクション", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
-          <%= f.select :action_type, ["サーブ", "レシーブ", "トス", "アタック", "ブロック"], { prompt: "種目" }, { required: true, style: "width: 100%; padding: 8px;" } %>
+        <!-- スパイク -->
+        <div style="margin-bottom: 10px;">
+          <span style="display: inline-block; width: 100px; font-weight: bold;">💥 スパイク:</span>
+          <button type="button" onclick="submitQuick('スパイク', '決定', '得点/成功')" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">決定 (得点)</button>
+          <button type="button" onclick="submitQuick('スパイク', '継続', '継続/普通')" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">継続 (拾われた)</button>
+          <button type="button" onclick="submitQuick('スパイク', 'ミス', 'ミス/失点')" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">ミス/被ブロック</button>
         </div>
 
-        <div style="flex: 1; min-width: 130px;">
-          <%= f.label :result, "結果", style: "font-weight: bold; display: block; margin-bottom: 5px;" %>
-          <%= f.select :result, ["得点/成功", "継続/普通", "ミス/失点"], { prompt: "結果" }, { required: true, style: "width: 100%; padding: 8px;" } %>
-        </div>
-
+        <!-- レセプション -->
         <div>
-          <%= f.submit "記録追加", style: "background: #28a745; color: white; border: none; padding: 9px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;" %>
+          <span style="display: inline-block; width: 100px; font-weight: bold;">🛡️ レセプション:</span>
+          <button type="button" onclick="submitQuick('レセプション', 'Aパス', '得点/成功')" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Aパス (100%)</button>
+          <button type="button" onclick="submitQuick('レセプション', 'Bパス', '継続/普通')" style="background: #ffc107; color: #333; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Bパス (50%)</button>
+          <button type="button" onclick="submitQuick('レセプション', 'Cパス/ミス', 'ミス/失点')" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Cパス/ミス (0%)</button>
         </div>
+
+        <%= f.hidden_field :action_type, id: "action_type_input" %>
+        <%= f.hidden_field :eval_detail, id: "eval_detail_input" %>
+        <%= f.hidden_field :result, id: "result_input" %>
+      </div>
+
+      <!-- Step 3: コートマップ (コース分析用タップ) -->
+      <div>
+        <label style="font-weight: bold; display: block; margin-bottom: 5px;">3. スパイクコース入力 (コート上を2タップ: 起点 → 着地点)</label>
+        <div style="position: relative; width: 100%; max-width: 500px; height: 250px; background: #e0a96d; border: 4px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.2); margin: 0 auto; cursor: crosshair; border-radius: 4px;" id="court_map" onclick="handleCourtClick(event)">
+          <!-- ネットライン -->
+          <div style="position: absolute; top: 50%; width: 100%; height: 4px; background: #fff; transform: translateY(-50%);"></div>
+          <!-- センターテキスト -->
+          <div style="position: absolute; top: 10%; left: 5%; color: rgba(255,255,255,0.7); font-weight: bold; pointer-events: none;">相手コート</div>
+          <div style="position: absolute; bottom: 10%; left: 5%; color: rgba(255,255,255,0.7); font-weight: bold; pointer-events: none;">自チームコート</div>
+        </div>
+        <p id="court_tap_status" style="text-align: center; font-size: 0.9em; color: #666; margin-top: 5px;">タップ待ち: 起点(打たれた位置)をクリックしてください</p>
       </div>
     <% end %>
   </div>
 
-  <!-- 記録一覧表示 -->
-  <h3>📊 第 <%= current_set %> セットのプレイ記録履歴</h3>
+  <!-- 履歴ログ -->
+  <h3>📋 第 <%= current_set %> セット 記録履歴</h3>
   <% logs = @match.play_logs.where(set_number: current_set).order(created_at: :desc) %>
   <% if logs.any? %>
     <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
       <thead>
         <tr style="background: #e9ecef; text-align: left;">
-          <th style="padding: 10px; border: 1px solid #ccc;">選手</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">アクション</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">結果</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">時刻</th>
-          <th style="padding: 10px; border: 1px solid #ccc; text-align: center;">操作</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">チーム</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">選手</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">種目</th>
+          <th style="padding: 8px; border: 1px solid #ccc;">詳細評価</th>
+          <th style="padding: 8px; border: 1px solid #ccc; text-align: center;">操作</th>
         </tr>
       </thead>
       <tbody>
         <% logs.each do |log| %>
           <tr>
-            <td style="padding: 10px; border: 1px solid #ccc;">#<%= log.player.number %> <%= log.player.name %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= log.action_type %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;">
-              <% if log.result == "得点/成功" %>
-                <span style="color: #28a745; font-weight: bold;">★ 得点/成功</span>
-              <% elsif log.result == "ミス/失点" %>
-                <span style="color: #dc3545; font-weight: bold;">✕ ミス/失点</span>
-              <% else %>
-                <span style="color: #6c757d;">◯ 継続</span>
-              <% end %>
-            </td>
-            <td style="padding: 10px; border: 1px solid #ccc; font-size: 0.9em; color: #666;"><%= log.created_at.strftime("%H:%M:%S") %></td>
-            <td style="padding: 10px; border: 1px solid #ccc; text-align: center;">
+            <td style="padding: 8px; border: 1px solid #ccc;"><%= log.team_type == 'own' ? '自チーム' : '相手チーム' %></td>
+            <td style="padding: 8px; border: 1px solid #ccc;"><%= log.player.present? ? "##{log.player.number} #{log.player.name}" : "-" %></td>
+            <td style="padding: 8px; border: 1px solid #ccc;"><%= log.action_type %></td>
+            <td style="padding: 8px; border: 1px solid #ccc; font-weight: bold;"><%= log.eval_detail %></td>
+            <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">
               <%= link_to "削除", team_match_play_log_path(@team, @match, log), data: { turbo_method: :delete }, style: "color: #dc3545; text-decoration: none;" %>
             </td>
           </tr>
         <% end %>
       </tbody>
     </table>
-  <% else %>
-    <p style="color: #666; margin-top: 15px;">第 <%= current_set %> セットのプレイ記録はまだありません。</p>
   <% end %>
 </div>
+
+<script>
+  let tapStep = 0;
+
+  function handleCourtClick(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    if (tapStep === 0) {
+      document.getElementById('start_x').value = x.toFixed(1);
+      document.getElementById('start_y').value = y.toFixed(1);
+      document.getElementById('court_tap_status').innerText = "起点登録完了 (X:" + x.toFixed(0) + "%, Y:" + y.toFixed(0) + "%) → 次に着地点(落ちた位置)をクリック";
+      document.getElementById('court_tap_status').style.color = "#007bff";
+      tapStep = 1;
+    } else {
+      document.getElementById('end_x').value = x.toFixed(1);
+      document.getElementById('end_y').value = y.toFixed(1);
+      document.getElementById('court_tap_status').innerText = "コース登録完了！ アクションボタンを押して記録を確定できます";
+      document.getElementById('court_tap_status').style.color = "#28a745";
+      tapStep = 0;
+    }
+  }
+
+  function submitQuick(action, evalDetail, result) {
+    document.getElementById('action_type_input').value = action;
+    document.getElementById('eval_detail_input').value = evalDetail;
+    document.getElementById('result_input').value = result;
+    document.getElementById('quick_log_form').submit();
+  }
+</script>
