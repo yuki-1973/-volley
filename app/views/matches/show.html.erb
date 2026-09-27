@@ -94,12 +94,8 @@
                   data-player-number="<%= player.number %>"
                   data-player-name="<%= player.name %>"
                   data-player-pos="<%= player.position %>"
-                  onmousedown="handlePressStart(this)"
-                  onmouseup="handlePressEnd(this)"
-                  onmouseleave="handlePressCancel()"
-                  ontouchstart="handlePressStart(this)"
-                  ontouchend="handlePressEnd(this)"
-                  ontouchcancel="handlePressCancel()"
+                  onclick="onPlayerClick(this)"
+                  oncontextmenu="return false;"
                   title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
                   style="width: 60px; height: 34px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 5px; font-weight: bold; font-size: 0.95em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
             <%= player.number %>
@@ -359,26 +355,35 @@
   let selectedMode = null;
 
   let pressTimer = null;
-  let isLongPress = false;
   let currentSwapTargetBtn = null;
 
-  function handlePressStart(btn) {
-    isLongPress = false;
-    pressTimer = setTimeout(() => {
-      isLongPress = true;
-      openSwapModal(btn);
-    }, 500);
+  // 選手ボタンイベント処理（クリック・タッチ・長押し対応）
+  function setupPlayerButtonEvents(btn) {
+    let pressStartTime = 0;
+
+    const startPress = (e) => {
+      pressStartTime = Date.now();
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        openSwapModal(btn);
+      }, 400); // 0.4秒以上で長押し判定
+    };
+
+    const cancelPress = () => {
+      clearTimeout(pressTimer);
+    };
+
+    btn.onmousedown = startPress;
+    btn.ontouchstart = startPress;
+
+    btn.onmouseup = cancelPress;
+    btn.onmouseleave = cancelPress;
+    btn.ontouchend = cancelPress;
+    btn.ontouchcancel = cancelPress;
   }
 
-  function handlePressEnd(btn) {
-    clearTimeout(pressTimer);
-    if (!isLongPress) {
-      togglePlayerSelect(btn);
-    }
-  }
-
-  function handlePressCancel() {
-    clearTimeout(pressTimer);
+  function onPlayerClick(btn) {
+    togglePlayerSelect(btn);
   }
 
   function openSwapModal(btn) {
@@ -450,22 +455,23 @@
     btn.setAttribute('data-player-number', number);
     btn.setAttribute('data-player-name', name);
     btn.setAttribute('data-player-pos', pos);
+    btn.setAttribute('onclick', 'onPlayerClick(this)');
+    btn.setAttribute('oncontextmenu', 'return false;');
     btn.setAttribute('title', number + " " + name + " (" + pos + ")");
     btn.style.cssText = `width: 60px; height: 34px; background: ${colors.bgColor}; color: ${colors.textColor}; border: 3px solid transparent; border-radius: 5px; font-weight: bold; font-size: 0.95em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;`;
     btn.innerText = number;
 
-    btn.onmousedown = function() { handlePressStart(this); };
-    btn.onmouseup = function() { handlePressEnd(this); };
-    btn.onmouseleave = function() { handlePressCancel(); };
-    btn.ontouchstart = function() { handlePressStart(this); };
-    btn.ontouchend = function() { handlePressEnd(this); };
-    btn.ontouchcancel = function() { handlePressCancel(); };
-
+    setupPlayerButtonEvents(btn);
     container.appendChild(btn);
     closeAddPlayerModal();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    // 既存のボタン全てに長押しイベントをバインド
+    document.querySelectorAll('.player-btn').forEach(btn => {
+      setupPlayerButtonEvents(btn);
+    });
+
     const scrollPos = sessionStorage.getItem('match_show_scroll_pos');
     if (scrollPos) {
       window.scrollTo(0, parseInt(scrollPos, 10));
@@ -493,7 +499,7 @@
       });
 
       btn.style.borderColor = '#00e676';
-      btn.style.boxShadow = '0 0 8px #00e676';
+      btn.style.boxShadow = '0 0 10px #00e676';
 
       document.querySelectorAll('.log-element').forEach(el => {
         const elPlayerId = el.getAttribute('data-player-id');
