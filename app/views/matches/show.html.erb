@@ -67,45 +67,49 @@
     <% end %>
   </div>
 
-  <!-- メイン画面レイアウト (左: スタメンボタン6〜8個 / 右: コート) -->
+  <!-- メイン画面レイアウト -->
   <div id="main_input_container" style="display: grid; grid-template-columns: 75px 1fr; gap: 8px; align-items: start; background: #222; padding: 8px; border-radius: 8px; color: white;">
     
-    <!-- 左側エリア: 1列縦並び操作パネル -->
+    <!-- 左側エリア: 選手ボタン表示エリア -->
     <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; border-right: 1px solid #444; padding-right: 6px;">
       
-      <div style="font-size: 0.6em; font-weight: bold; color: #aaa; text-align: center;">スタメン<br><span style="font-size: 0.8em; color: #888;">(長押し交代)</span></div>
+      <div style="font-size: 0.6em; font-weight: bold; color: #aaa; text-align: center;">選手選択<br><span style="font-size: 0.8em; color: #888;">(長押し変更)</span></div>
       
-      <!-- スタメン選手ボタン (6~8個) -->
-      <% starters.each_with_index do |player, idx| %>
-        <%
-          bg_color = case player.position
-                     when "S"  then "#ffeb3b"
-                     when "L"  then "#28a745"
-                     when "W"  then "#ffffff"
-                     when "M", "MB" then "#7bc043"
-                     when "OP" then "#fd7e14"
-                     else "#ffffff"
-                     end
-          text_color = ["S", "W"].include?(player.position) || bg_color == "#ffffff" ? "#222222" : "#ffffff"
-        %>
-        <button type="button" class="player-btn" id="starter_btn_<%= idx %>"
-                data-player-id="<%= player.id %>" 
-                data-player-number="<%= player.number %>"
-                data-player-name="<%= player.name %>"
-                data-player-pos="<%= player.position %>"
-                onmousedown="handlePressStart(this)"
-                onmouseup="handlePressEnd(this)"
-                onmouseleave="handlePressCancel()"
-                ontouchstart="handlePressStart(this)"
-                ontouchend="handlePressEnd(this)"
-                ontouchcancel="handlePressCancel()"
-                title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
-                style="width: 60px; height: 34px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 5px; font-weight: bold; font-size: 0.95em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
-          <%= player.number %>
-        </button>
-      <% end %>
+      <!-- 動的に管理する選手ボタンコンテナ -->
+      <div id="player_buttons_container" style="display: flex; flex-direction: column; gap: 5px; width: 100%; align-items: center;">
+        <% starters.each_with_index do |player, idx| %>
+          <%
+            bg_color = case player.position
+                       when "S"  then "#ffeb3b"
+                       when "L"  then "#28a745"
+                       when "W"  then "#ffffff"
+                       when "M", "MB" then "#7bc043"
+                       when "OP" then "#fd7e14"
+                       else "#ffffff"
+                       end
+            text_color = ["S", "W"].include?(player.position) || bg_color == "#ffffff" ? "#222222" : "#ffffff"
+          %>
+          <button type="button" class="player-btn" id="starter_btn_<%= idx %>"
+                  data-player-id="<%= player.id %>" 
+                  data-player-number="<%= player.number %>"
+                  data-player-name="<%= player.name %>"
+                  data-player-pos="<%= player.position %>"
+                  onmousedown="handlePressStart(this)"
+                  onmouseup="handlePressEnd(this)"
+                  onmouseleave="handlePressCancel()"
+                  ontouchstart="handlePressStart(this)"
+                  ontouchend="handlePressEnd(this)"
+                  ontouchcancel="handlePressCancel()"
+                  title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
+                  style="width: 60px; height: 34px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 5px; font-weight: bold; font-size: 0.95em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+            <%= player.number %>
+          </button>
+        <% end %>
+      </div>
 
-      <button type="button" onclick="resetPlayerFilter()" style="width: 60px; padding: 3px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-bottom: 4px;">全表示</button>
+      <!-- 選手追加ボタン -->
+      <button type="button" onclick="openAddPlayerModal()" style="width: 60px; padding: 4px 0; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 0.7em; font-weight: bold; cursor: pointer; margin-top: 2px;">＋ 追加</button>
+      <button type="button" onclick="resetPlayerFilter()" style="width: 60px; padding: 3px 0; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-bottom: 4px;">全表示</button>
 
       <div style="width: 100%; border-bottom: 1px solid #555; margin: 2px 0;"></div>
       <div style="font-size: 0.65em; font-weight: bold; color: #aaa;">評価入力</div>
@@ -205,7 +209,7 @@
       </div>
 
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 5px; border-radius: 4px; color: #00e676; font-size: 0.75em; font-weight: bold;">
-        背番号タップでその選手のコースのみ表示（長押しで交代）
+        背番号タップでコース表示（長押しで変更・削除）
       </div>
     </div>
   </div>
@@ -291,18 +295,24 @@
   </div>
 </div>
 
-<!-- 選手交代用モーダルポップアップ -->
+<!-- 選手交代/非表示用モーダル -->
 <div id="player_swap_modal" class="modal-overlay">
   <div class="modal-content">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 8px; margin-bottom: 12px;">
-      <h3 style="margin: 0; font-size: 1.0em; color: #ffeb3b;">🔄 選手交代</h3>
+      <h3 style="margin: 0; font-size: 1.0em; color: #ffeb3b;">🔄 選手変更・削除</h3>
       <button type="button" onclick="closeSwapModal()" style="background: none; border: none; color: #aaa; font-size: 1.2em; cursor: pointer;">✕</button>
     </div>
     <p style="font-size: 0.8em; margin: 0 0 10px 0; color: #ddd;">
-      現在選択: <strong id="target_player_label" style="color: #00e676;"></strong><br>交代する選手を選択してください。
+      対象: <strong id="target_player_label" style="color: #00e676;"></strong>
     </p>
+
+    <!-- 非表示（削除）ボタン -->
+    <button type="button" onclick="removeCurrentPlayerButton()" style="width: 100%; padding: 8px; background: #dc3545; color: white; border: none; border-radius: 5px; font-weight: bold; font-size: 0.85em; cursor: pointer; margin-bottom: 10px;">
+      ❌ このボタンを非表示（削除）にする
+    </button>
     
-    <div style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 0.75em; color: #aaa; margin-bottom: 6px;">別の選手へ変更:</div>
+    <div style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
       <% @team.players.where.not(name: [nil, ""]).each do |p| %>
         <button type="button" onclick="executeSwap('<%= p.id %>', '<%= p.number %>', '<%= p.name %>', '<%= p.position %>')"
                 style="width: 100%; text-align: left; padding: 8px 10px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.85em; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
@@ -318,12 +328,36 @@
   </div>
 </div>
 
+<!-- 控え選手追加用モーダル -->
+<div id="add_player_modal" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 8px; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 1.0em; color: #007bff;">＋ 選手ボタンの追加</h3>
+      <button type="button" onclick="closeAddPlayerModal()" style="background: none; border: none; color: #aaa; font-size: 1.2em; cursor: pointer;">✕</button>
+    </div>
+    <p style="font-size: 0.8em; margin: 0 0 10px 0; color: #ddd;">
+      入力パネルに追加する選手を選択してください。
+    </p>
+    <div style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+      <% @team.players.where.not(name: [nil, ""]).each do |p| %>
+        <button type="button" onclick="addNewPlayerButton('<%= p.id %>', '<%= p.number %>', '<%= p.name %>', '<%= p.position %>')"
+                style="width: 100%; text-align: left; padding: 8px 10px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.85em; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+          <span><strong><%= p.number %></strong> <%= p.name %></span>
+          <span style="font-size: 0.75em; color: #aaa;">(<%= p.position %>)</span>
+        </button>
+      <% end %>
+    </div>
+    <div style="margin-top: 12px; text-align: right;">
+      <button type="button" onclick="closeAddPlayerModal()" style="padding: 6px 12px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let isLocked = false;
   let activePlayerId = null;
   let selectedMode = null;
 
-  // 長押し判定用タイマー
   let pressTimer = null;
   let isLongPress = false;
   let currentSwapTargetBtn = null;
@@ -333,7 +367,7 @@
     pressTimer = setTimeout(() => {
       isLongPress = true;
       openSwapModal(btn);
-    }, 500); // 0.5秒の長押し
+    }, 500);
   }
 
   function handlePressEnd(btn) {
@@ -361,39 +395,74 @@
     currentSwapTargetBtn = null;
   }
 
-  // クライアント側で安全にボタンの属性と見た目を書き換える交代処理
-  function executeSwap(newId, newNumber, newName, newPos) {
-    if (!currentSwapTargetBtn) return;
+  function removeCurrentPlayerButton() {
+    if (currentSwapTargetBtn) {
+      currentSwapTargetBtn.remove();
+      resetPlayerFilter();
+      closeSwapModal();
+    }
+  }
 
-    // ポジションごとの背景色決定
+  function openAddPlayerModal() {
+    document.getElementById('add_player_modal').style.display = 'flex';
+  }
+
+  function closeAddPlayerModal() {
+    document.getElementById('add_player_modal').style.display = 'none';
+  }
+
+  function getPosColors(pos) {
     let bgColor = "#ffffff";
     let textColor = "#222222";
+    if (pos === "S") { bgColor = "#ffeb3b"; textColor = "#222222"; }
+    else if (pos === "L") { bgColor = "#28a745"; textColor = "#ffffff"; }
+    else if (pos === "W") { bgColor = "#ffffff"; textColor = "#222222"; }
+    else if (pos === "M" || pos === "MB") { bgColor = "#7bc043"; textColor = "#ffffff"; }
+    else if (pos === "OP") { bgColor = "#fd7e14"; textColor = "#ffffff"; }
+    return { bgColor, textColor };
+  }
 
-    if (newPos === "S") {
-      bgColor = "#ffeb3b"; textColor = "#222222";
-    } else if (newPos === "L") {
-      bgColor = "#28a745"; textColor = "#ffffff";
-    } else if (newPos === "W") {
-      bgColor = "#ffffff"; textColor = "#222222";
-    } else if (newPos === "M" || newPos === "MB") {
-      bgColor = "#7bc043"; textColor = "#ffffff"; // MB: 黄緑
-    } else if (newPos === "OP") {
-      bgColor = "#fd7e14"; textColor = "#ffffff";
-    }
+  function executeSwap(newId, newNumber, newName, newPos) {
+    if (!currentSwapTargetBtn) return;
+    const colors = getPosColors(newPos);
 
-    // ボタンの属性・見た目を更新
     currentSwapTargetBtn.setAttribute('data-player-id', newId);
     currentSwapTargetBtn.setAttribute('data-player-number', newNumber);
     currentSwapTargetBtn.setAttribute('data-player-name', newName);
     currentSwapTargetBtn.setAttribute('data-player-pos', newPos);
     currentSwapTargetBtn.setAttribute('title', newNumber + " " + newName + " (" + newPos + ")");
     currentSwapTargetBtn.innerText = newNumber;
-    currentSwapTargetBtn.style.background = bgColor;
-    currentSwapTargetBtn.style.color = textColor;
+    currentSwapTargetBtn.style.background = colors.bgColor;
+    currentSwapTargetBtn.style.color = colors.textColor;
 
-    // 選択状態の解除
     resetPlayerFilter();
     closeSwapModal();
+  }
+
+  function addNewPlayerButton(id, number, name, pos) {
+    const container = document.getElementById('player_buttons_container');
+    const colors = getPosColors(pos);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'player-btn';
+    btn.setAttribute('data-player-id', id);
+    btn.setAttribute('data-player-number', number);
+    btn.setAttribute('data-player-name', name);
+    btn.setAttribute('data-player-pos', pos);
+    btn.setAttribute('title', number + " " + name + " (" + pos + ")");
+    btn.style.cssText = `width: 60px; height: 34px; background: ${colors.bgColor}; color: ${colors.textColor}; border: 3px solid transparent; border-radius: 5px; font-weight: bold; font-size: 0.95em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;`;
+    btn.innerText = number;
+
+    btn.onmousedown = function() { handlePressStart(this); };
+    btn.onmouseup = function() { handlePressEnd(this); };
+    btn.onmouseleave = function() { handlePressCancel(); };
+    btn.ontouchstart = function() { handlePressStart(this); };
+    btn.ontouchend = function() { handlePressEnd(this); };
+    btn.ontouchcancel = function() { handlePressCancel(); };
+
+    container.appendChild(btn);
+    closeAddPlayerModal();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -435,7 +504,7 @@
         }
       });
 
-      updateStatus("背番号 " + playerNumName + " 選択中（長押しで交代）");
+      updateStatus("背番号 " + playerNumName + " 選択中（長押しで変更・削除）");
     }
   }
 
