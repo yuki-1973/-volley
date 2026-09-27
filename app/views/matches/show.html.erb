@@ -5,16 +5,15 @@
 <% end %>
 
 <style>
-  /* レスポンシブコンテナ */
   .court-wrapper {
     width: 100%;
-    max-width: 280px; /* スマホ画面で左右サイドラインがはみ出ない最適幅 */
+    max-width: 280px;
     margin: 0 auto;
   }
   .court-canvas {
     position: relative;
     width: 100%;
-    aspect-ratio: 1 / 2; /* バレーボールコートの正比率(18m x 9m) */
+    aspect-ratio: 1 / 2;
     background: #d97724;
     border: 3px solid white;
     border-radius: 4px;
@@ -23,6 +22,32 @@
     user-select: none;
     -webkit-user-select: none;
     box-sizing: border-box;
+  }
+  /* 長押し中のアニメーション補正 */
+  .player-btn {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+  /* 交代用モーダルスタイル */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-content {
+    background: #222;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 320px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border: 1px solid #444;
   }
 </style>
 
@@ -49,9 +74,9 @@
     <!-- 左側エリア: 1列縦並び操作パネル -->
     <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; border-right: 1px solid #444; padding-right: 6px;">
       
-      <div style="font-size: 0.65em; font-weight: bold; color: #aaa;">選手選択</div>
+      <div style="font-size: 0.6em; font-weight: bold; color: #aaa; text-align: center;">選手選択<br><span style="font-size: 0.8em; color: #888;">(長押し交代)</span></div>
       
-      <!-- 背番号ボタン -->
+      <!-- 背番号ボタン（長押しイベント対応） -->
       <% starters.each do |player| %>
         <%
           bg_color = case player.position
@@ -67,7 +92,13 @@
         <button type="button" class="player-btn" 
                 data-player-id="<%= player.id %>" 
                 data-player-name="<%= player.number %> <%= player.name %>"
-                onclick="togglePlayerSelect(this)"
+                data-player-pos="<%= player.position %>"
+                onmousedown="handlePressStart(this)"
+                onmouseup="handlePressEnd(this)"
+                onmouseleave="handlePressCancel()"
+                ontouchstart="handlePressStart(this)"
+                ontouchend="handlePressEnd(this)"
+                ontouchcancel="handlePressCancel()"
                 title="<%= player.number %> <%= player.name %> (<%= player.position %>)"
                 style="width: 60px; height: 34px; background: <%= bg_color %>; color: <%= text_color %>; border: 3px solid transparent; border-radius: 5px; font-weight: bold; font-size: 0.95em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
           <%= player.number %>
@@ -111,31 +142,21 @@
 
     </div>
 
-    <!-- 右側エリア: バレーボールコートマップ (画面内に収まるレスポンシブ幅) -->
+    <!-- 右側エリア: コート表示 -->
     <div style="text-align: center; padding: 2px;">
-      
       <div class="court-wrapper">
-        <!-- 相手サーブエリア -->
         <div id="opp_serve_area" onclick="selectZone('レセプション')" style="background: #444; color: #ffeb3b; padding: 6px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; font-size: 0.75em; font-weight: bold; border: 2px solid transparent;">
           ▲ 相手サーブエリア (タップ)
         </div>
 
-        <!-- バレーボールコート本体 -->
         <div id="court_canvas" class="court-canvas">
-          
-          <!-- センターライン -->
           <div style="position: absolute; top: 50%; width: 100%; height: 2px; background: white; pointer-events: none; transform: translateY(-50%); z-index: 2;"></div>
-          
-          <!-- アタックライン (相手コート: 上から 33.33%) -->
           <div style="position: absolute; top: 33.33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
-
-          <!-- アタックライン (自チームコート: 下から 33.33%) -->
           <div style="position: absolute; bottom: 33.33%; width: 100%; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none;"></div>
           
           <div style="position: absolute; top: 15%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.8em;">相手コート</div>
           <div style="position: absolute; bottom: 15%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.8em;">自チームコート</div>
 
-          <!-- SVG 矢印表示レイヤー -->
           <svg id="arrow_svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; overflow: visible;">
             <defs>
               <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -152,7 +173,6 @@
               </marker>
             </defs>
 
-            <!-- 過去ログの描画 (ブロックは画面非表示) -->
             <% @match.play_logs.where(set_number: current_set).each do |log| %>
               <% p_id = log.player_id.to_s %>
               <% if log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? && log.action_type != "ブロック" %>
@@ -174,24 +194,22 @@
               <% end %>
             <% end %>
 
-            <!-- ドラッグ中のプレビュー線 -->
             <line id="preview_line" x1="0" y1="0" x2="0" y2="0" stroke="#ffffff" stroke-width="3.5" marker-end="url(#arrow-white)" style="display: none;" />
           </svg>
         </div>
 
-        <!-- 自チームサーブエリア -->
         <div id="own_serve_area" onclick="selectZone('サーブ')" style="background: #444; color: #ffeb3b; padding: 6px; margin-top: 5px; border-radius: 4px; cursor: pointer; font-size: 0.75em; font-weight: bold; border: 2px solid transparent;">
           ▼ エンドライン (タップ)
         </div>
       </div>
 
       <div id="status_bar" style="margin-top: 6px; background: #333; padding: 5px; border-radius: 4px; color: #00e676; font-size: 0.75em; font-weight: bold;">
-        背番号タップでその選手のコースのみ表示
+        背番号タップでその選手のコースのみ表示（長押しで交代）
       </div>
     </div>
   </div>
 
-  <!-- 送信用隠しフォーム -->
+  <!-- 隠しフォーム -->
   <%= form_with model: [@team, @match, PlayLog.new], local: true, id: "play_log_form" do |f| %>
     <%= f.hidden_field :set_number, value: current_set %>
     <%= f.hidden_field :player_id, id: "form_player_id" %>
@@ -204,7 +222,7 @@
     <%= f.hidden_field :end_y, id: "form_end_y" %>
   <% end %>
 
-  <!-- 集計データ表示テーブル -->
+  <!-- 集計テーブル -->
   <div style="margin-top: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
     <h3 style="margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 5px; color: #333; font-size: 1.0em;">📊 選手別スタッツ (第 <%= current_set %> セット)</h3>
     <table style="width: 100%; border-collapse: collapse; margin-top: 6px; text-align: center; font-size: 0.85em; min-width: 500px;">
@@ -252,7 +270,7 @@
     </table>
   </div>
 
-  <!-- セット最終スコア入力 & セット終了エリア -->
+  <!-- スコア入力エリア -->
   <div style="margin-top: 15px; background: #f8f9fa; border: 2px solid #007bff; padding: 12px; border-radius: 8px;">
     <h4 style="margin: 0 0 8px 0; color: #007bff; font-size: 0.95em;">🏁 第 <%= current_set %> セット 最終スコア入力・終了</h4>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -272,10 +290,71 @@
   </div>
 </div>
 
+<!-- 選手交代用モーダルポップアップ -->
+<div id="player_swap_modal" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 8px; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 1.0em; color: #ffeb3b;">🔄 選手交代</h3>
+      <button onclick="closeSwapModal()" style="background: none; border: none; color: #aaa; font-size: 1.2em; cursor: pointer;">✕</button>
+    </div>
+    <p style="font-size: 0.8em; margin: 0 0 10px 0; color: #ddd;">
+      現在選択: <strong id="target_player_label" style="color: #00e676;"></strong><br>交代する選手を選択してください。
+    </p>
+    
+    <div style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+      <% @team.players.where.not(name: [nil, ""]).each do |p| %>
+        <%= button_to team_player_path(@team, p), method: :patch, params: { player: { is_starter: true } }, 
+                      style: "width: 100%; text-align: left; padding: 8px 10px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.85em; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" do %>
+          <span><strong><%= p.number %></strong> <%= p.name %></span>
+          <span style="font-size: 0.75em; color: #aaa;">(<%= p.position %>)</span>
+        <% end %>
+      <% end %>
+    </div>
+    
+    <div style="margin-top: 12px; text-align: right;">
+      <button type="button" onclick="closeSwapModal()" style="padding: 6px 12px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let isLocked = false;
   let activePlayerId = null;
   let selectedMode = null;
+
+  // 長押し判定用タイマー
+  let pressTimer = null;
+  let isLongPress = false;
+
+  function handlePressStart(btn) {
+    isLongPress = false;
+    pressTimer = setTimeout(() => {
+      isLongPress = true;
+      openSwapModal(btn);
+    }, 500); // 0.5秒長押しでダイアログを表示
+  }
+
+  function handlePressEnd(btn) {
+    clearTimeout(pressTimer);
+    if (!isLongPress) {
+      togglePlayerSelect(btn);
+    }
+  }
+
+  function handlePressCancel() {
+    clearTimeout(pressTimer);
+  }
+
+  function openSwapModal(btn) {
+    const pName = btn.getAttribute('data-player-name');
+    const pPos = btn.getAttribute('data-player-pos');
+    document.getElementById('target_player_label').innerText = pName + " (" + pPos + ")";
+    document.getElementById('player_swap_modal').style.display = 'flex';
+  }
+
+  function closeSwapModal() {
+    document.getElementById('player_swap_modal').style.display = 'none';
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     const scrollPos = sessionStorage.getItem('match_show_scroll_pos');
@@ -315,7 +394,7 @@
         }
       });
 
-      updateStatus("背番号 " + btn.getAttribute('data-player-name') + " 選択中（もう一度タップで全表示）");
+      updateStatus("背番号 " + btn.getAttribute('data-player-name') + " 選択中（長押しで交代）");
     }
   }
 
