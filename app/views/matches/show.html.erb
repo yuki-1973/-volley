@@ -1,7 +1,7 @@
 <% current_set = params[:set_number].present? ? params[:set_number].to_i : 1 %>
-<% starters = @team.players.where(is_starter: true) %>
+<% starters = @team.players.where(is_starter: true).limit(8) %>
 <% if starters.empty? %>
-  <% starters = @team.players.first(8) %>
+  <% starters = @team.players.where.not(name: [nil, ""]).first(8) %>
 <% end %>
 
 <style>
@@ -23,18 +23,17 @@
     -webkit-user-select: none;
     box-sizing: border-box;
   }
-  /* 長押し中のアニメーション補正 */
   .player-btn {
     -webkit-touch-callout: none;
     user-select: none;
   }
-  /* 交代用モーダルスタイル */
+  /* モーダル表示用スタイル */
   .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.75);
     z-index: 9999;
     justify-content: center;
     align-items: center;
@@ -44,7 +43,7 @@
     color: white;
     padding: 15px;
     border-radius: 8px;
-    width: 90%;
+    width: 88%;
     max-width: 320px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     border: 1px solid #444;
@@ -68,16 +67,16 @@
     <% end %>
   </div>
 
-  <!-- メイン画面レイアウト (左: 1列縦並びボタン / 右: コート) -->
+  <!-- メイン画面レイアウト (左: スタメンボタン6〜8個 / 右: コート) -->
   <div id="main_input_container" style="display: grid; grid-template-columns: 75px 1fr; gap: 8px; align-items: start; background: #222; padding: 8px; border-radius: 8px; color: white;">
     
     <!-- 左側エリア: 1列縦並び操作パネル -->
     <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; border-right: 1px solid #444; padding-right: 6px;">
       
-      <div style="font-size: 0.6em; font-weight: bold; color: #aaa; text-align: center;">選手選択<br><span style="font-size: 0.8em; color: #888;">(長押し交代)</span></div>
+      <div style="font-size: 0.6em; font-weight: bold; color: #aaa; text-align: center;">スタメン<br><span style="font-size: 0.8em; color: #888;">(長押し交代)</span></div>
       
-      <!-- 背番号ボタン（長押しイベント対応） -->
-      <% starters.each do |player| %>
+      <!-- スタメン選手ボタン (6~8個) -->
+      <% starters.each_with_index do |player, idx| %>
         <%
           bg_color = case player.position
                      when "S"  then "#ffeb3b"
@@ -89,9 +88,10 @@
                      end
           text_color = ["S", "W"].include?(player.position) || bg_color == "#ffffff" ? "#222222" : "#ffffff"
         %>
-        <button type="button" class="player-btn" 
+        <button type="button" class="player-btn" id="starter_btn_<%= idx %>"
                 data-player-id="<%= player.id %>" 
-                data-player-name="<%= player.number %> <%= player.name %>"
+                data-player-number="<%= player.number %>"
+                data-player-name="<%= player.name %>"
                 data-player-pos="<%= player.position %>"
                 onmousedown="handlePressStart(this)"
                 onmouseup="handlePressEnd(this)"
@@ -104,6 +104,7 @@
           <%= player.number %>
         </button>
       <% end %>
+
       <button type="button" onclick="resetPlayerFilter()" style="width: 60px; padding: 3px; background: #555; color: white; border: none; border-radius: 4px; font-size: 0.65em; cursor: pointer; margin-bottom: 4px;">全表示</button>
 
       <div style="width: 100%; border-bottom: 1px solid #555; margin: 2px 0;"></div>
@@ -295,7 +296,7 @@
   <div class="modal-content">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 1.0em; color: #ffeb3b;">🔄 選手交代</h3>
-      <button onclick="closeSwapModal()" style="background: none; border: none; color: #aaa; font-size: 1.2em; cursor: pointer;">✕</button>
+      <button type="button" onclick="closeSwapModal()" style="background: none; border: none; color: #aaa; font-size: 1.2em; cursor: pointer;">✕</button>
     </div>
     <p style="font-size: 0.8em; margin: 0 0 10px 0; color: #ddd;">
       現在選択: <strong id="target_player_label" style="color: #00e676;"></strong><br>交代する選手を選択してください。
@@ -303,11 +304,11 @@
     
     <div style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
       <% @team.players.where.not(name: [nil, ""]).each do |p| %>
-        <%= button_to team_player_path(@team, p), method: :patch, params: { player: { is_starter: true } }, 
-                      style: "width: 100%; text-align: left; padding: 8px 10px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.85em; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" do %>
+        <button type="button" onclick="executeSwap('<%= p.id %>', '<%= p.number %>', '<%= p.name %>', '<%= p.position %>')"
+                style="width: 100%; text-align: left; padding: 8px 10px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.85em; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
           <span><strong><%= p.number %></strong> <%= p.name %></span>
           <span style="font-size: 0.75em; color: #aaa;">(<%= p.position %>)</span>
-        <% end %>
+        </button>
       <% end %>
     </div>
     
@@ -325,13 +326,14 @@
   // 長押し判定用タイマー
   let pressTimer = null;
   let isLongPress = false;
+  let currentSwapTargetBtn = null;
 
   function handlePressStart(btn) {
     isLongPress = false;
     pressTimer = setTimeout(() => {
       isLongPress = true;
       openSwapModal(btn);
-    }, 500); // 0.5秒長押しでダイアログを表示
+    }, 500); // 0.5秒の長押し
   }
 
   function handlePressEnd(btn) {
@@ -346,14 +348,52 @@
   }
 
   function openSwapModal(btn) {
+    currentSwapTargetBtn = btn;
+    const pNum = btn.getAttribute('data-player-number');
     const pName = btn.getAttribute('data-player-name');
     const pPos = btn.getAttribute('data-player-pos');
-    document.getElementById('target_player_label').innerText = pName + " (" + pPos + ")";
+    document.getElementById('target_player_label').innerText = pNum + " " + pName + " (" + pPos + ")";
     document.getElementById('player_swap_modal').style.display = 'flex';
   }
 
   function closeSwapModal() {
     document.getElementById('player_swap_modal').style.display = 'none';
+    currentSwapTargetBtn = null;
+  }
+
+  // クライアント側で安全にボタンの属性と見た目を書き換える交代処理
+  function executeSwap(newId, newNumber, newName, newPos) {
+    if (!currentSwapTargetBtn) return;
+
+    // ポジションごとの背景色決定
+    let bgColor = "#ffffff";
+    let textColor = "#222222";
+
+    if (newPos === "S") {
+      bgColor = "#ffeb3b"; textColor = "#222222";
+    } else if (newPos === "L") {
+      bgColor = "#28a745"; textColor = "#ffffff";
+    } else if (newPos === "W") {
+      bgColor = "#ffffff"; textColor = "#222222";
+    } else if (newPos === "M" || newPos === "MB") {
+      bgColor = "#7bc043"; textColor = "#ffffff"; // MB: 黄緑
+    } else if (newPos === "OP") {
+      bgColor = "#fd7e14"; textColor = "#ffffff";
+    }
+
+    // ボタンの属性・見た目を更新
+    currentSwapTargetBtn.setAttribute('data-player-id', newId);
+    currentSwapTargetBtn.setAttribute('data-player-number', newNumber);
+    currentSwapTargetBtn.setAttribute('data-player-name', newName);
+    currentSwapTargetBtn.setAttribute('data-player-pos', newPos);
+    currentSwapTargetBtn.setAttribute('title', newNumber + " " + newName + " (" + newPos + ")");
+    currentSwapTargetBtn.innerText = newNumber;
+    currentSwapTargetBtn.style.background = bgColor;
+    currentSwapTargetBtn.style.color = textColor;
+
+    // 選択状態の解除
+    resetPlayerFilter();
+    closeSwapModal();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -371,6 +411,7 @@
 
   function togglePlayerSelect(btn) {
     const targetPlayerId = btn.getAttribute('data-player-id');
+    const playerNumName = btn.getAttribute('data-player-number') + " " + btn.getAttribute('data-player-name');
 
     if (activePlayerId === targetPlayerId) {
       resetPlayerFilter();
@@ -394,7 +435,7 @@
         }
       });
 
-      updateStatus("背番号 " + btn.getAttribute('data-player-name') + " 選択中（長押しで交代）");
+      updateStatus("背番号 " + playerNumName + " 選択中（長押しで交代）");
     }
   }
 
