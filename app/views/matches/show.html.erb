@@ -135,7 +135,7 @@
           <div style="position: absolute; top: 15%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.8em;">相手コート</div>
           <div style="position: absolute; bottom: 15%; width: 100%; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none; font-size: 0.8em;">自チームコート</div>
 
-          <!-- SVG 矢印＆ブロックマーク表示レイヤー -->
+          <!-- SVG 矢印表示レイヤー -->
           <svg id="arrow_svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; overflow: visible;">
             <defs>
               <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -152,12 +152,10 @@
               </marker>
             </defs>
 
-            <!-- 過去ログの描画 -->
+            <!-- 過去ログの描画 (ブロックは画面非表示) -->
             <% @match.play_logs.where(set_number: current_set).each do |log| %>
               <% p_id = log.player_id.to_s %>
-              <% if log.action_type == "ブロック" && log.start_x.present? %>
-                <rect class="log-element log-player-<%= p_id %>" data-player-id="<%= p_id %>" x="<%= log.start_x.to_f - 3 %>%" y="47%" width="6%" height="6%" fill="#fd7e14" rx="3" stroke="#ffffff" stroke-width="1.5" />
-              <% elsif log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? %>
+              <% if log.start_x.present? && log.start_y.present? && log.end_x.present? && log.end_y.present? && log.action_type != "ブロック" %>
                 <%
                   arrow_color = case log.eval_detail
                                 when "◎" then "#ffeb3b"
@@ -176,7 +174,7 @@
               <% end %>
             <% end %>
 
-            <!-- ドラッグ中のプレビュー線（白色に変更） -->
+            <!-- ドラッグ中のプレビュー線 -->
             <line id="preview_line" x1="0" y1="0" x2="0" y2="0" stroke="#ffffff" stroke-width="3.5" marker-end="url(#arrow-white)" style="display: none;" />
           </svg>
         </div>
@@ -370,8 +368,8 @@
   }
 
   let isDrawing = false;
-  let startPos = { x: 0, y: 0 };
-  let endPos = { x: 0, y: 0 };
+  let startPos = { x: null, y: null };
+  let endPos = { x: null, y: null };
 
   const court = document.getElementById('court_canvas');
   const previewLine = document.getElementById('preview_line');
@@ -430,7 +428,7 @@
     previewLine.setAttribute('x2', endPos.x + '%');
     previewLine.setAttribute('y2', endPos.y + '%');
 
-    const isOpponentStart = parseFloat(startPos.y) < 50;
+    const isOpponentStart = startPos.y !== null && parseFloat(startPos.y) < 50;
     const attackerType = isOpponentStart ? "【相手スパイク】" : "【自チームスパイク】";
     updateStatus(attackerType + " 描画中 ➔ 評価ボタンをタップ");
   }
@@ -463,8 +461,10 @@
     document.getElementById('form_action_type').value = "ブロック";
     document.getElementById('form_eval_detail').value = "◎";
     document.getElementById('form_result').value = "ブロック決定";
-    document.getElementById('form_start_x').value = "50.0";
-    document.getElementById('form_start_y').value = "50.0";
+    document.getElementById('form_start_x').value = "";
+    document.getElementById('form_start_y').value = "";
+    document.getElementById('form_end_x').value = "";
+    document.getElementById('form_end_y').value = "";
 
     saveScrollPositionAndSubmit();
   }
@@ -473,7 +473,7 @@
     if (isLocked) return;
 
     let actionType = "スパイク";
-    const isOpponentSpike = (startPos.y !== 0 && parseFloat(startPos.y) < 50.0);
+    const isOpponentSpike = (startPos.y !== null && parseFloat(startPos.y) < 50.0);
 
     if (selectedMode === "サーブ") {
       actionType = "サーブ";
@@ -498,7 +498,7 @@
       document.getElementById('form_start_y').value = "";
       document.getElementById('form_end_x').value = "";
       document.getElementById('form_end_y').value = "";
-    } else if (startPos.x !== 0 || startPos.y !== 0) {
+    } else if (startPos.x !== null && startPos.y !== null) {
       document.getElementById('form_start_x').value = startPos.x;
       document.getElementById('form_start_y').value = startPos.y;
       document.getElementById('form_end_x').value = endPos.x;
