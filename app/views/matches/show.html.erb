@@ -133,10 +133,10 @@
 
       <div style="width: 100%; border-bottom: 1px solid #555; margin: 2px 0;"></div>
 
-      <!-- 修正/戻るボタン -->
+      <!-- 修正/戻るボタン（フォーム入れ子防止修繕） -->
       <% last_log = @match.play_logs.where(set_number: current_set).last %>
       <% if last_log.present? %>
-        <%= button_to "↩ 戻る", team_match_play_log_path(@team, @match, last_log), method: :delete, data: { confirm: "直前の記録を取り消しますか？" }, style: "width: 60px; padding: 6px 0; background: #6c757d; color: white; border: none; border-radius: 5px; font-size: 0.7em; font-weight: bold; cursor: pointer; text-align: center;" %>
+        <button type="button" onclick="deleteLastLog('<%= team_match_play_log_path(@team, @match, last_log) %>')" style="width: 60px; padding: 6px 0; background: #6c757d; color: white; border: none; border-radius: 5px; font-size: 0.7em; font-weight: bold; cursor: pointer; text-align: center;">↩ 戻る</button>
       <% else %>
         <button type="button" disabled style="width: 60px; padding: 6px 0; background: #444; color: #888; border: none; border-radius: 5px; font-size: 0.7em; font-weight: bold; cursor: not-allowed; text-align: center;">↩ 戻る</button>
       <% end %>
@@ -210,7 +210,7 @@
     </div>
   </div>
 
-  <!-- 隠しフォーム -->
+  <!-- 隠しフォーム (データ入力用) -->
   <%= form_with model: [@team, @match, PlayLog.new], local: true, id: "play_log_form" do |f| %>
     <%= f.hidden_field :set_number, value: current_set %>
     <%= f.hidden_field :player_id, id: "form_player_id" %>
@@ -222,6 +222,12 @@
     <%= f.hidden_field :end_x, id: "form_end_x" %>
     <%= f.hidden_field :end_y, id: "form_end_y" %>
   <% end %>
+
+  <!-- 削除専用隠しフォーム -->
+  <form id="delete_log_form" method="post" style="display: none;">
+    <input type="hidden" name="_method" value="delete">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+  </form>
 
   <!-- 集計テーブル -->
   <div style="margin-top: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
@@ -357,7 +363,17 @@
   let pressTimer = null;
   let currentSwapTargetBtn = null;
 
-  // 選手ボタンイベント処理（クリック・タッチ・長押し対応）
+  // 1件削除用の安全な送信処理
+  function deleteLastLog(deleteUrl) {
+    if (confirm("直前の記録を取り消しますか？")) {
+      const deleteForm = document.getElementById('delete_log_form');
+      deleteForm.action = deleteUrl;
+      sessionStorage.setItem('match_show_scroll_pos', window.scrollY);
+      deleteForm.submit();
+    }
+  }
+
+  // 選手ボタンイベント処理
   function setupPlayerButtonEvents(btn) {
     let pressStartTime = 0;
 
@@ -366,7 +382,7 @@
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => {
         openSwapModal(btn);
-      }, 400); // 0.4秒以上で長押し判定
+      }, 400);
     };
 
     const cancelPress = () => {
@@ -467,7 +483,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // 既存のボタン全てに長押しイベントをバインド
     document.querySelectorAll('.player-btn').forEach(btn => {
       setupPlayerButtonEvents(btn);
     });
