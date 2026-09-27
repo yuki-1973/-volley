@@ -58,11 +58,11 @@
                      when "S"  then "#ffeb3b"
                      when "L"  then "#28a745"
                      when "W"  then "#ffffff"
-                     when "M"  then "#6c757d"
+                     when "M"  then "#ffffff"
                      when "OP" then "#fd7e14"
-                     else "#aaaaaa"
+                     else "#ffffff"
                      end
-          text_color = ["S", "W"].include?(player.position) ? "#222222" : "#ffffff"
+          text_color = ["S", "W", "M"].include?(player.position) || bg_color == "#ffffff" ? "#222222" : "#ffffff"
         %>
         <button type="button" class="player-btn" 
                 data-player-id="<%= player.id %>" 
