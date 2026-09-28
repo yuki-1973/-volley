@@ -1,10 +1,10 @@
 {
-  "name": "バレーボールデータ分析",
+  "name": "バレー分析",
   "short_name": "バレー分析",
-  "start_url": "/",
+  "start_url": "/offline.html",
   "display": "standalone",
-  "background_color": "#222222",
-  "theme_color": "#007bff",
+  "background_color": "#121212",
+  "theme_color": "#121212",
   "icons": [
     {
       "src": "/icon-192.png",
